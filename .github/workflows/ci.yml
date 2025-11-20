@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    tags:
+      - '**'
+
+env:
+  SDRPLAY_SOFTWARE_DOWNLOADS: 'https://www.sdrplay.com/software'
+
+jobs:
+  windows-build:
+    name: Windows cross-compile
+    runs-on: ubuntu-24.04
+    env:
+      SDRPLAY_API_FILE_WINDOWS: SDRplay_RSP_API-Windows-3.15.exe
+      SDRPLAY_API_EXTRACT_DIR: /tmp/SDRplay
+    steps:
+      - name: Install dependencies
+        run: sudo apt update -qq && sudo apt install -y mingw-w64 innoextract
+      - name: Install SDRplay API
+        run: |
+          curl -s -S -O "$SDRPLAY_SOFTWARE_DOWNLOADS/$SDRPLAY_API_FILE_WINDOWS"
+          innoextract "$SDRPLAY_API_FILE_WINDOWS" -I app/API -d "$SDRPLAY_API_EXTRACT_DIR"
+          sudo mv "$SDRPLAY_API_EXTRACT_DIR/app/API/inc/sdrplay_api"*.h /usr/local/include/
+          sudo mv "$SDRPLAY_API_EXTRACT_DIR/app/API/x64/sdrplay_api".* /usr/local/lib/
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Build
+        run: |
+          mkdir build
+          cd build
+          cmake -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc ..
+          make
+      - name: Checksums
+        run: |
+          cd build
+          sha256sum rsp-recorder.exe > checksums-sha256.txt
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            build/rsp-recorder.exe
+            build/checksums-sha256.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
