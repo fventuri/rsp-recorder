@@ -11,7 +11,10 @@
 
 #include "typedefs.h"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 #include <sdrplay_api.h>
+#pragma GCC diagnostic pop
 
 
 /* global variables */

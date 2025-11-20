@@ -33,7 +33,7 @@ StreamingStatus streaming_status = STREAMING_STATUS_STARTING;
 /* internal functions */
 static void signal_handler(int signum);
 #ifdef WIN32
-static VOID CALLBACK windows_timer_handler(PVOID lpParam, BOOLEAN TimerOrWaitFired)
+static VOID CALLBACK windows_timer_handler(PVOID lpParam, BOOLEAN TimerOrWaitFired);
 #endif /* WIN32 */
 static int next_block_descriptor_single(BlockDescriptor **pBlock);
 static int next_block_descriptors_dual(BlockDescriptor **pBlockA, BlockDescriptor **pBlockB);
@@ -51,10 +51,7 @@ int stream() {
     HANDLE timerQueue = CreateTimerQueue();
     if (timerQueue == NULL) {
         fprintf(stderr, "CreateTimerQueue failed - error=0x%lx\n", GetLastError());
-        close(outfd);
-        sdrplay_api_ReleaseDevice(&device);
-        sdrplay_api_Close();
-        exit(1);
+        return -1;
     } 
     HANDLE timer = NULL;
     if (!CreateTimerQueueTimer(&timer, timerQueue, (WAITORTIMERCALLBACK)windows_timer_handler, NULL, streaming_time * 1000, 0, 0)) {

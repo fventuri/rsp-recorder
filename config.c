@@ -17,8 +17,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <sdrplay_api.h>
-
 /* defaults */
 static const sdrplay_api_AgcControlT default_agc_enabled_setting = sdrplay_api_AGC_50HZ;
 static char default_output_filename_raw[] = "RSP_recording_{TIMESTAMP}_{FREQKHZ}.iq";
