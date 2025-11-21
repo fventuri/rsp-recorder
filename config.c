@@ -85,7 +85,7 @@ static void usage(const char* progname)
     fprintf(stderr, "options:\n");
     fprintf(stderr, "    -c <confiiguration file>\n");
     fprintf(stderr, "    -s <RSP serial number>\n");
-    fprintf(stderr, "    -t <RSPduo mode> (1: single tuner, 2: dual tuner, 4: master, 8: slave\n");
+    fprintf(stderr, "    -t <RSPduo mode> (1: single tuner, 2: dual tuner, 4: master, 8: slave)\n");
     fprintf(stderr, "    -a <antenna>\n");
     fprintf(stderr, "    -r <RSP sample rate>\n");
     fprintf(stderr, "    -d <decimation>\n");

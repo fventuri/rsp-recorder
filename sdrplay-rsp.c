@@ -155,9 +155,9 @@ int sdrplay_select_rsp()
         internal_decimation = sdrplay_internal_decimation(sample_rate, if_frequency, if_bandwidth);
         if (rspduo_mode == sdrplay_api_RspDuoMode_Unknown) {
             if (internal_decimation > 1) {
-                if (device.rspDuoMode == sdrplay_api_RspDuoMode_Dual_Tuner) {
+                if ((device.rspDuoMode & sdrplay_api_RspDuoMode_Dual_Tuner) == sdrplay_api_RspDuoMode_Dual_Tuner) {
                     rspduo_mode = sdrplay_api_RspDuoMode_Dual_Tuner;
-                } else if (device.rspDuoMode == sdrplay_api_RspDuoMode_Slave) {
+                } else if ((device.rspDuoMode & sdrplay_api_RspDuoMode_Slave) == sdrplay_api_RspDuoMode_Slave) {
                     rspduo_mode = sdrplay_api_RspDuoMode_Slave;
                 } else {
                     fprintf(stderr, "SDRplay RSPduo - no tuners available\n");
