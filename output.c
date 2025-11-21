@@ -141,6 +141,8 @@ static int generate_output_filename(char *output_filename, int output_filename_m
     int timestamp_place_holder_len = sizeof(timestamp_place_holder) - 1;
     const char tsiso8601_place_holder[] = "{TSISO8601}";
     int tsiso8601_place_holder_len = sizeof(tsiso8601_place_holder) - 1;
+    const char localtime_place_holder[] = "{LOCALTIME}";
+    int localtime_place_holder_len = sizeof(localtime_place_holder) - 1;
 
     time_t t = time(NULL);
     struct tm *tm = gmtime(&t);
@@ -206,6 +208,14 @@ static int generate_output_filename(char *output_filename, int output_filename_m
                 return -1;
             src += tsiso8601_place_holder_len;
             dst += nts;
+        } else if (strncmp(src, localtime_place_holder, localtime_place_holder_len) == 0) {
+            sz = dstlast - dst;
+            struct tm *localtm = localtime(&t);
+            size_t nlt = strftime(dst, sz, "%Y%m%d_%H%M%S%z", localtm);
+            if (nlt == 0)
+                return -1;
+            src += localtime_place_holder_len;
+            dst += nlt;
         } else {
             if (dst == dstlast)
                 return -1;

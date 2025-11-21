@@ -60,10 +60,12 @@ The name of the output file containing the samples can be specified with the `-o
   - {FREQ} will be replaced by the center frequency in Hz
   - {FREQHZ} will be replaced by the center frequency in Hz followed by 'Hz'
   - {FREQKHZ} will be replaced by the center frequency in kHz followed by 'kHz'
-  - {TIMESTAMP} will be replaced by the timestamp at the beginning of the recording in 'YYYYMMDD_HHMMSS' format
-  - {TSIS8601} will be replaced by the timestamp at the beginning of the recording in IS08601 format
+  - {TIMESTAMP} will be replaced by the UTC timestamp at the beginning of the recording in 'YYYYMMDD_HHMMSS' format
+  - {TSIS8601} will be replaced by the UTC timestamp at the beginning of the recording in IS08601 format
+  - {LOCALTIME} will be replaced by the local time at the beginning of the recording in 'YYYYMMDD_HHMMSS+-TZOFFSET' format
 
-For instance, an output filename specified as 'RSP_recording_{TIMESTAMP}_{FREQHZ}.wav' could generate an output file with this actual name: RSP_recording_20251118_130947_162550000Hz.wav
+For instance, an output filename specified as 'RSP_recording_{TIMESTAMP}_{FREQHZ}.wav' could generate an output file with this actual name: RSP_recording_20251118_130947Z_162550000Hz.wav.
+An output filename specified as 'RSP_recording_{LOCALTIME}_{FREQHZ}.wav' could generate an output file with this actual name: RSP_recording_20251118_080947-0500_162550000Hz.wav.
 
 
 ## Antenna names
