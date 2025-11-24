@@ -53,8 +53,8 @@ int output_open() {
     }
 
     if (strcmp(output_filename, "-") == 0) {
-        if (!(output_type == OUTPUT_TYPE_RAW || output_type == OUTPUT_TYPE_LINRAD)) {
-            fprintf(stderr, "stdout is only supported for raw and Linrad formats\n");
+        if (!(output_type == OUTPUT_TYPE_WAVVIEWDX_RAW || output_type == OUTPUT_TYPE_LINRAD)) {
+            fprintf(stderr, "stdout is only supported for WavViewDX-raw and Linrad formats\n");
             return -1;
         }
         outputfd = fileno(stdout);
@@ -72,9 +72,19 @@ int output_open() {
             fprintf(stderr, "write() Linrad header failed: %s\n", strerror(errno));
             return -1;
         }
-    } else if (output_type == OUTPUT_TYPE_WAV) {
-        if (write_wav_header() == -1) {
-            fprintf(stderr, "write() WAV header failed: %s\n", strerror(errno));
+    } else if (output_type == OUTPUT_TYPE_SDRUNO) {
+        if (write_sdruno_header() == -1) {
+            fprintf(stderr, "write() SDRuno header failed: %s\n", strerror(errno));
+            return -1;
+        }
+    } else if (output_type == OUTPUT_TYPE_SDRCONNECT) {
+        if (write_sdrconnect_header() == -1) {
+            fprintf(stderr, "write() SDRconnect header failed: %s\n", strerror(errno));
+            return -1;
+        }
+    } else if (output_type == OUTPUT_TYPE_EXPERIMENTAL) {
+        if (write_experimental_header() == -1) {
+            fprintf(stderr, "write() experimental format header failed: %s\n", strerror(errno));
             return -1;
         }
     }
@@ -114,9 +124,17 @@ void output_close() {
         is_outsamples_buffer_allocated = false;
     }
     if (is_output_open) {
-        if (output_type == OUTPUT_TYPE_WAV) {
-            if (finalize_wav_file() == -1) {
-                fprintf(stderr, "finalize() WAV file failed: %s\n", strerror(errno));
+        if (output_type == OUTPUT_TYPE_SDRUNO) {
+            if (finalize_sdruno_file() == -1) {
+                fprintf(stderr, "finalize() SDRuno file failed: %s\n", strerror(errno));
+            }
+        } else if (output_type == OUTPUT_TYPE_SDRCONNECT) {
+            if (finalize_sdrconnect_file() == -1) {
+                fprintf(stderr, "finalize() SDRconnect file failed: %s\n", strerror(errno));
+            }
+        } else if (output_type == OUTPUT_TYPE_EXPERIMENTAL) {
+            if (finalize_experimental_file() == -1) {
+                fprintf(stderr, "finalize() experimental format file failed: %s\n", strerror(errno));
             }
         }
         close(outputfd);
@@ -130,19 +148,88 @@ void output_close() {
     }
 }
 
+int output_validate_filename() {
+    const char wavviewdx_raw_placeholder[] = "{WAVVIEWDX-RAW}";
+    int wavviewdx_raw_placeholder_len = sizeof(wavviewdx_raw_placeholder) - 1;
+    const char sdruno_placeholder[] = "{SDRUNO}";
+    int sdruno_placeholder_len = sizeof(sdruno_placeholder) - 1;
+    const char sdrconnect_placeholder[] = "{SDRCONNECT}";
+    int sdrconnect_placeholder_len = sizeof(sdrconnect_placeholder) - 1;
+
+    if (output_type == OUTPUT_TYPE_WAVVIEWDX_RAW) {
+        const char *ps = strstr(outfile_template, wavviewdx_raw_placeholder);
+        if (ps == NULL) {
+            fprintf(stderr, "output type WavViewDX-raw requires '{WAVVIEWDX-RAW}' in the output filename\n");
+            return -1;
+        }
+        const char *pe = ps + wavviewdx_raw_placeholder_len;
+        if (!((ps == outfile_template || *(ps-1) == '/' || *(ps-1) == '\\') &&
+               (pe + 4 <= outfile_template + strlen(outfile_template)) &&
+               (*pe == '.' || *pe == '_'))) {
+            fprintf(stderr, "for WavViewDX-raw files the string '{WAVVIEWDX-RAW}' must be at the beginning of the output filename and must be followed by either '.' or '_'\n");
+            return -1;
+        }
+        if (strstr(outfile_template, sdruno_placeholder) != NULL || strstr(outfile_template, sdrconnect_placeholder) != NULL) {
+            fprintf(stderr, "output type WavViewDX-raw cannot have '{SDRUNO}' or '{SDRCONNECT}' in the output filename\n");
+            return -1;
+        }
+    } else if (output_type == OUTPUT_TYPE_SDRUNO) {
+        const char *ps = strstr(outfile_template, sdruno_placeholder);
+        if (ps == NULL) {
+            fprintf(stderr, "output type SDRuno requires '{SDRUNO}' in the output filename\n");
+            return -1;
+        }
+        const char *pe = ps + sdruno_placeholder_len;
+        if (!((ps == outfile_template || *(ps-1) == '/' || *(ps-1) == '\\') &&
+               (pe + 4 <= outfile_template + strlen(outfile_template)) &&
+               (*pe == '.' || *pe == '_'))) {
+            fprintf(stderr, "for SDRuno files the string '{SDRUNO}' must be at the beginning of the output filename and must be followed by either '.' or '_'\n");
+            return -1;
+        }
+        if (strstr(outfile_template, wavviewdx_raw_placeholder) != NULL || strstr(outfile_template, sdrconnect_placeholder) != NULL) {
+            fprintf(stderr, "output type SDRuno cannot have '{WAVVIEWDX-RAW}' or '{SDRCONNECT}' in the output filename\n");
+            return -1;
+        }
+    } else if (output_type == OUTPUT_TYPE_SDRCONNECT) {
+        const char *ps = strstr(outfile_template, sdrconnect_placeholder);
+        if (ps == NULL) {
+            fprintf(stderr, "output type SDRconnect requires '{SDRCONNECT}' in the output filename\n");
+            return -1;
+        }
+        const char *pe = ps + sdrconnect_placeholder_len;
+        if (!((ps == outfile_template || *(ps-1) == '/' || *(ps-1) == '\\') &&
+               (pe + 4 <= outfile_template + strlen(outfile_template)) &&
+               (*pe == '.' || *pe == '_'))) {
+            fprintf(stderr, "for SDRconnect files the string '{SDRCONNECT}' must be at the beginning of the output filename and must be followed by either '.' or '_'\n");
+            return -1;
+        }
+        if (strstr(outfile_template, wavviewdx_raw_placeholder) != NULL || strstr(outfile_template, sdruno_placeholder) != NULL) {
+            fprintf(stderr, "output type SDRconnect cannot have '{WAVVIEWDX-RAW}' or '{SDRUNO}' in the output filename\n");
+            return -1;
+        }
+    }
+    return 0;
+}
+
 static int generate_output_filename(char *output_filename, int output_filename_max_size) {
-    const char freq_place_holder[] = "{FREQ}";
-    int freq_place_holder_len = sizeof(freq_place_holder) - 1;
-    const char freqhz_place_holder[] = "{FREQHZ}";
-    int freqhz_place_holder_len = sizeof(freqhz_place_holder) - 1;
-    const char freqkhz_place_holder[] = "{FREQKHZ}";
-    int freqkhz_place_holder_len = sizeof(freqkhz_place_holder) - 1;
-    const char timestamp_place_holder[] = "{TIMESTAMP}";
-    int timestamp_place_holder_len = sizeof(timestamp_place_holder) - 1;
-    const char tsiso8601_place_holder[] = "{TSISO8601}";
-    int tsiso8601_place_holder_len = sizeof(tsiso8601_place_holder) - 1;
-    const char localtime_place_holder[] = "{LOCALTIME}";
-    int localtime_place_holder_len = sizeof(localtime_place_holder) - 1;
+    const char wavviewdx_raw_placeholder[] = "{WAVVIEWDX-RAW}";
+    int wavviewdx_raw_placeholder_len = sizeof(wavviewdx_raw_placeholder) - 1;
+    const char sdruno_placeholder[] = "{SDRUNO}";
+    int sdruno_placeholder_len = sizeof(sdruno_placeholder) - 1;
+    const char sdrconnect_placeholder[] = "{SDRCONNECT}";
+    int sdrconnect_placeholder_len = sizeof(sdrconnect_placeholder) - 1;
+    const char freq_placeholder[] = "{FREQ}";
+    int freq_placeholder_len = sizeof(freq_placeholder) - 1;
+    const char freqhz_placeholder[] = "{FREQHZ}";
+    int freqhz_placeholder_len = sizeof(freqhz_placeholder) - 1;
+    const char freqkhz_placeholder[] = "{FREQKHZ}";
+    int freqkhz_placeholder_len = sizeof(freqkhz_placeholder) - 1;
+    const char timestamp_placeholder[] = "{TIMESTAMP}";
+    int timestamp_placeholder_len = sizeof(timestamp_placeholder) - 1;
+    const char tsiso8601_placeholder[] = "{TSISO8601}";
+    int tsiso8601_placeholder_len = sizeof(tsiso8601_placeholder) - 1;
+    const char localtime_placeholder[] = "{LOCALTIME}";
+    int localtime_placeholder_len = sizeof(localtime_placeholder) - 1;
 
     time_t t = time(NULL);
     struct tm *tm = gmtime(&t);
@@ -158,7 +245,36 @@ static int generate_output_filename(char *output_filename, int output_filename_m
         strncpy(dst, src, sz);
         src = p;
         dst += sz;
-        if (strncmp(src, freq_place_holder, freq_place_holder_len) == 0) {
+        if (strncmp(src, wavviewdx_raw_placeholder, wavviewdx_raw_placeholder_len) == 0) {
+            sz = dstlast - dst;
+            struct tm *localtm = localtime(&t);
+            char tsbuf[16];
+            strftime(tsbuf, sizeof(tsbuf), "%Y%m%d-%H%M%S", localtm);
+            size_t nwvdr = snprintf(dst, sz, "iq_pcm16_ch%d_cf%.0lf_sr%.0lf_dt%s", is_dual_tuner ? 2 :1, frequency_A, output_sample_rate, tsbuf);
+            if (nwvdr >= sz)
+                return -1;
+            src += wavviewdx_raw_placeholder_len;
+            dst += nwvdr;
+        } else if (strncmp(src, sdruno_placeholder, sdruno_placeholder_len) == 0) {
+            sz = dstlast - dst;
+            char tsbuf[16];
+            strftime(tsbuf, sizeof(tsbuf), "%Y%m%d_%H%M%S", tm);
+            size_t nsu = snprintf(dst, sz, "SDRuno_%sZ_%.0lfkHz", tsbuf, frequency_A / 1e3);
+            if (nsu >= sz)
+                return -1;
+            src += sdruno_placeholder_len;
+            dst += nsu;
+        } else if (strncmp(src, sdrconnect_placeholder, sdrconnect_placeholder_len) == 0) {
+            sz = dstlast - dst;
+            struct tm *localtm = localtime(&t);
+            char tsbuf[16];
+            strftime(tsbuf, sizeof(tsbuf), "%Y%m%d_%H%M%S", localtm);
+            size_t nsc = snprintf(dst, sz, "SDRconnect_IQ_%s_%.0lfHZ", tsbuf, frequency_A);
+            if (nsc >= sz)
+                return -1;
+            src += sdrconnect_placeholder_len;
+            dst += nsc;
+        } else if (strncmp(src, freq_placeholder, freq_placeholder_len) == 0) {
             sz = dstlast - dst;
             size_t nf;
             if (!is_dual_tuner || frequency_A == frequency_B) {
@@ -168,9 +284,9 @@ static int generate_output_filename(char *output_filename, int output_filename_m
             }
             if (nf >= sz)
                 return -1;
-            src += freq_place_holder_len;
+            src += freq_placeholder_len;
             dst += nf;
-        } else if (strncmp(src, freqhz_place_holder, freqhz_place_holder_len) == 0) {
+        } else if (strncmp(src, freqhz_placeholder, freqhz_placeholder_len) == 0) {
             sz = dstlast - dst;
             size_t nf;
             if (!is_dual_tuner || frequency_A == frequency_B) {
@@ -180,9 +296,9 @@ static int generate_output_filename(char *output_filename, int output_filename_m
             }
             if (nf >= sz)
                 return -1;
-            src += freqhz_place_holder_len;
+            src += freqhz_placeholder_len;
             dst += nf;
-        } else if (strncmp(src, freqkhz_place_holder, freqkhz_place_holder_len) == 0) {
+        } else if (strncmp(src, freqkhz_placeholder, freqkhz_placeholder_len) == 0) {
             sz = dstlast - dst;
             size_t nf;
             if (!is_dual_tuner || frequency_A == frequency_B) {
@@ -192,29 +308,29 @@ static int generate_output_filename(char *output_filename, int output_filename_m
             }
             if (nf >= sz)
                 return -1;
-            src += freqkhz_place_holder_len;
+            src += freqkhz_placeholder_len;
             dst += nf;
-        } else if (strncmp(src, timestamp_place_holder, timestamp_place_holder_len) == 0) {
+        } else if (strncmp(src, timestamp_placeholder, timestamp_placeholder_len) == 0) {
             sz = dstlast - dst;
             size_t nts = strftime(dst, sz, "%Y%m%d_%H%M%SZ", tm);
             if (nts == 0)
                 return -1;
-            src += timestamp_place_holder_len;
+            src += timestamp_placeholder_len;
             dst += nts;
-        } else if (strncmp(src, tsiso8601_place_holder, tsiso8601_place_holder_len) == 0) {
+        } else if (strncmp(src, tsiso8601_placeholder, tsiso8601_placeholder_len) == 0) {
             sz = dstlast - dst;
             size_t nts = strftime(dst, sz, "%Y%m%dT%H%M%SZ", tm);
             if (nts == 0)
                 return -1;
-            src += tsiso8601_place_holder_len;
+            src += tsiso8601_placeholder_len;
             dst += nts;
-        } else if (strncmp(src, localtime_place_holder, localtime_place_holder_len) == 0) {
+        } else if (strncmp(src, localtime_placeholder, localtime_placeholder_len) == 0) {
             sz = dstlast - dst;
             struct tm *localtm = localtime(&t);
             size_t nlt = strftime(dst, sz, "%Y%m%d_%H%M%S%z", localtm);
             if (nlt == 0)
                 return -1;
-            src += localtime_place_holder_len;
+            src += localtime_placeholder_len;
             dst += nlt;
         } else {
             if (dst == dstlast)

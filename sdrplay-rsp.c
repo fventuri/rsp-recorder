@@ -700,6 +700,11 @@ float sdrplay_get_current_gain(int tuner) {
     return 0;
 }
 
+unsigned long long estimate_data_size() {
+    unsigned int nrx = is_dual_tuner ? 2 : 1;
+    return (unsigned long long) output_sample_rate * nrx * 2 * sizeof(short) * streaming_time;
+}
+
 static void sdrplay_print_settings() {
     if (!is_dual_tuner) {
         sdrplay_api_RxChannelParamsT *rx_channel_params = device_params->rxChannelA;

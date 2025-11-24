@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# show metadata stored in SDRuno/SDRconnect I/Q recordings
+# examine metadata stored in SDRuno/SDRconnect/SDRConsole I/Q recordings
 #
 # Copyright 2024-2025 Franco Venturi
 #
@@ -13,13 +13,19 @@ import struct
 import sys
 
 def fmt_chunk(fmt_bytes):
-    fmt_code, number_of_channels, sample_rate, byte_rate, block_align, sample_width = struct.unpack('<2H2I2H', fmt_bytes)
+    extension_size = None
+    if len(fmt_bytes) == 16:
+        fmt_code, number_of_channels, sample_rate, byte_rate, block_align, sample_width = struct.unpack('<2H2I2H', fmt_bytes)
+    elif len(fmt_bytes) == 18:
+        fmt_code, number_of_channels, sample_rate, byte_rate, block_align, sample_width, extension_size = struct.unpack('<2H2I3H', fmt_bytes)
     print('Format Code :', fmt_code)
     print('Number of Channels :', number_of_channels)
     print('Sample Rate :', sample_rate)
     print('Byte Rate :', byte_rate)
     print('Block align :', block_align)
     print('Sample Width :', sample_width)
+    if extension_size is not None:
+        print('Extension Size :', extension_size)
 
 def auxi_sdrplay_chunk(auxi_bytes):
     auxi = struct.unpack('<8H8H9I96s', auxi_bytes)
@@ -75,6 +81,10 @@ def auxi_franco_chunk(auxi_bytes):
     unused5 = auxi[24]
     print('Unused5 :', unused5)
 
+def auxi_sdrconsole_chunk(auxi_bytes):
+    auxi = auxi_bytes.decode('UTF-16-LE')
+    print('Auxi :', auxi)
+
 def ds64_chunk(ds64_bytes):
     riffSizeLow, riffSizeHigh, dataSizeLow, dataSizeHigh, sampleCountLow, sampleCountHigh, tableLength = struct.unpack('<7I', ds64_bytes)
     print('riffSizeLow :', riffSizeLow)
@@ -125,8 +135,11 @@ def main():
             elif chunk_id == b'auxi':
                 if chunk_size == 164:
                     auxi_sdrplay_chunk(chunk_bytes)
-                if chunk_size == 68:
+                elif chunk_size == 68:
                     auxi_franco_chunk(chunk_bytes)
+                #elif chunk_bytes.startswith(b'<\x00?\x00x\x00m\x00l\x00 \x00'):
+                elif chunk_bytes.startswith('<?xml '.encode('UTF-16-LE')):
+                    auxi_sdrconsole_chunk(chunk_bytes)
             elif chunk_id == b'ds64':
                 ds64_chunk(chunk_bytes)
             elif chunk_id == b'JUNK':

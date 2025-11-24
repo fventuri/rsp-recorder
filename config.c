@@ -7,8 +7,7 @@
  */
 
 #include "config.h"
-#include "constants.h"
-#include "typedefs.h"
+#include "output.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -19,9 +18,11 @@
 
 /* defaults */
 static const sdrplay_api_AgcControlT default_agc_enabled_setting = sdrplay_api_AGC_50HZ;
-static char default_output_filename_raw[] = "RSP_recording_{TIMESTAMP}_{FREQKHZ}.iq";
+static char default_output_filename_wavviewdx_raw[] = "{WAVVIEWDX-RAW}.raw";
 static char default_output_filename_linrad[] = "RSP_recording_{TIMESTAMP}_{FREQKHZ}.raw";
-static char default_output_filename_wav[] = "RSP_recording_{TIMESTAMP}_{FREQHZ}.wav";
+static char default_output_filename_sdruno[] = "{SDRUNO}.wav";
+static char default_output_filename_sdrconnect[] = "{SDRCONNECT}.wav";
+static char default_output_filename_experimental[] = "RSP_recording_{TIMESTAMP}_{FREQKHZ}.wav";
 
 
 /* global variables */
@@ -57,7 +58,8 @@ double frequency_B = 100e6;
 int streaming_time = 10;  /* streaming time in seconds */
 int marker_interval = 0;  /* store a marker tick every N seconds */
 char *outfile_template = NULL;
-OutputType output_type = OUTPUT_TYPE_RAW;
+OutputType output_type = OUTPUT_TYPE_WAVVIEWDX_RAW;
+int write_auxi_chunk = 1;
 unsigned int zero_sample_gaps_max_size = 100000;
 #ifndef WIN32
 unsigned int blocks_buffer_capacity = 2000;
@@ -74,18 +76,22 @@ int gain_changes_buffer_capacity = 100;
 int debug_enable = 0;
 int verbose = 0;
 
-
 /* internal functions */
 static int read_config_file(const char *config_file);
+static OutputType output_type_from_string(const char *output_type_string);
+
+/* internal constants */
+#define LINE_BUFFER_SIZE 1024
+#define LINE_PARTS_BUFFER_SIZE 80
 
 
 static void usage(const char* progname)
 {
     fprintf(stderr, "usage: %s [options...]\n", progname);
     fprintf(stderr, "options:\n");
-    fprintf(stderr, "    -c <confiiguration file>\n");
+    fprintf(stderr, "    -c <configuration file>\n");
     fprintf(stderr, "    -s <RSP serial number>\n");
-    fprintf(stderr, "    -t <RSPduo mode> (1: single tuner, 2: dual tuner, 4: master, 8: slave)\n");
+    fprintf(stderr, "    -w <RSPduo mode> (1: single tuner, 2: dual tuner, 4: master, 8: slave)\n");
     fprintf(stderr, "    -a <antenna>\n");
     fprintf(stderr, "    -r <RSP sample rate>\n");
     fprintf(stderr, "    -d <decimation>\n");
@@ -103,6 +109,7 @@ static void usage(const char* progname)
     fprintf(stderr, "    -f <center frequency>\n");
     fprintf(stderr, "    -x <streaming time (s)> (default: 10s)\n");
     fprintf(stderr, "    -m <time marker interval (s)> (default: 0 -> no time markers)\n");
+    fprintf(stderr, "    -t <output file format> (one of: WavViewDX-raw, Linrad, SDRuno, SDRconnect, experimental)\n");
     fprintf(stderr, "    -o <output filename template>\n");
     fprintf(stderr, "    -z <zero sample gaps if smaller than size> (default: 100000)\n");
     fprintf(stderr, "    -j <blocks buffer capacity> (in number of blocks)\n");
@@ -110,6 +117,7 @@ static void usage(const char* progname)
     fprintf(stderr, "    -L output file in Linrad format\n");
     fprintf(stderr, "    -R output file in raw format (i.e. just the samples)\n");
     fprintf(stderr, "    -W output file in RIFF/RF64 format\n");
+    fprintf(stderr, "    -A do not write auxi chunk\n");
     fprintf(stderr, "    -G write gains file (default: disabled)\n");
     fprintf(stderr, "    -X enable SDRplay API debug log level (default: disabled)\n");
     fprintf(stderr, "    -v enable verbose mode (default: disabled)\n");
@@ -120,7 +128,7 @@ static void usage(const char* progname)
 int get_config_from_cli(int argc, char *argv[])
 {
     int c;
-    while ((c = getopt(argc, argv, "c:s:t:a:r:d:i:b:g:l:n:DIy:BHu:f:x:m:o:z:j:k:RLWGXvh")) != -1) {
+    while ((c = getopt(argc, argv, "c:s:w:a:r:d:i:b:g:l:n:DIy:BHu:f:x:m:t:o:z:j:k:GXvh")) != -1) {
         int n;
         switch (c) {
             case 'c':
@@ -132,7 +140,7 @@ int get_config_from_cli(int argc, char *argv[])
             case 's':
                 serial_number = optarg;
                 break;
-            case 't':
+            case 'w':
                 if (sscanf(optarg, "%d", (int *)(&rspduo_mode)) != 1) {
                     fprintf(stderr, "invalid RSPduo mode: %s\n", optarg);
                     return -1;
@@ -255,6 +263,13 @@ int get_config_from_cli(int argc, char *argv[])
                     return -1;
                 }
                 break;
+            case 't':
+                output_type = output_type_from_string(optarg);
+                if (output_type == OUTPUT_TYPE_UNKNOWN) {
+                    fprintf(stderr, "invalid output type: %s\n", optarg);
+                    return -1;
+                }
+                break;
             case 'o':
                 outfile_template = optarg;
                 break;
@@ -275,15 +290,6 @@ int get_config_from_cli(int argc, char *argv[])
                     fprintf(stderr, "invalid samples buffer capacity: %s\n", optarg);
                     return -1;
                 }
-                break;
-            case 'R':
-                output_type = OUTPUT_TYPE_RAW;
-                break;
-            case 'L':
-                output_type = OUTPUT_TYPE_LINRAD;
-                break;
-            case 'W':
-                output_type = OUTPUT_TYPE_WAV;
                 break;
             case 'G':
                 gains_file_enable = 1;
@@ -308,8 +314,8 @@ int get_config_from_cli(int argc, char *argv[])
     }
 
     if (marker_interval > 0) {
-        if (output_type != OUTPUT_TYPE_WAV) {
-            fprintf(stderr, "time markers require WAV output types");
+        if (output_type != OUTPUT_TYPE_EXPERIMENTAL) {
+            fprintf(stderr, "time markers require experimental output type");
             return -1;
         }
     }
@@ -321,18 +327,27 @@ int get_config_from_cli(int argc, char *argv[])
     /* output file template */
     if (outfile_template == NULL) {
         switch (output_type) {
-            case OUTPUT_TYPE_RAW:
-                outfile_template = default_output_filename_raw;
+            case OUTPUT_TYPE_WAVVIEWDX_RAW:
+                outfile_template = default_output_filename_wavviewdx_raw;
                 break;
             case OUTPUT_TYPE_LINRAD:
                 outfile_template = default_output_filename_linrad;
                 break;
-            case OUTPUT_TYPE_WAV:
-                outfile_template = default_output_filename_wav;
+            case OUTPUT_TYPE_SDRUNO:
+                outfile_template = default_output_filename_sdruno;
+                break;
+            case OUTPUT_TYPE_SDRCONNECT:
+                outfile_template = default_output_filename_sdrconnect;
+                break;
+            case OUTPUT_TYPE_EXPERIMENTAL:
+                outfile_template = default_output_filename_experimental;
                 break;
             default:
                 return -1;
         }
+    }
+    if (output_validate_filename() == -1) {
+        return -1;
     }
 
     return 0;
@@ -581,15 +596,12 @@ static int read_config_two_ints(const char *valuestr, int *value_first, int *val
 }
 
 static int read_config_output_type(const char *valuestr, OutputType *value) {
-    if (strcasecmp(valuestr, "raw") == 0) {
-        *value = OUTPUT_TYPE_RAW;
-    } else if (strcasecmp(valuestr, "linrad") == 0) {
-        *value = OUTPUT_TYPE_LINRAD;
-    } else if (strcasecmp(valuestr, "wav") == 0 || strcasecmp(valuestr, "rf64") == 0) {
-        *value = OUTPUT_TYPE_WAV;
-    } else {
+    OutputType ot = output_type_from_string(valuestr);
+    if (ot == OUTPUT_TYPE_UNKNOWN) {
         return -1;
     }
+    *value = ot;
+
     return 0;
 }
 
@@ -653,6 +665,8 @@ static int read_config_file(const char *config_file) {
             read_config_status = read_config_string(value, (const char **)(&outfile_template));
         } else if (strcasecmp(key, "output type") == 0) {
             read_config_status = read_config_output_type(value, &output_type);
+        } else if (strcasecmp(key, "auxi chunk") == 0) {
+            read_config_status = read_config_bool(value, &write_auxi_chunk);
         } else if (strcasecmp(key, "gains file") == 0) {
             read_config_status = read_config_bool(value, &gains_file_enable);
         } else if (strcasecmp(key, "zero sample gaps max size") == 0) {
@@ -676,4 +690,20 @@ static int read_config_file(const char *config_file) {
     }
     read_config_file_end();
     return status;
+}
+
+static OutputType output_type_from_string(const char *output_type_string) {
+    if (strcasecmp(output_type_string, "WavViewDX-raw") == 0 || strcasecmp(output_type_string, "WavViewDX") == 0) {
+        return OUTPUT_TYPE_WAVVIEWDX_RAW;
+    } else if (strcasecmp(output_type_string, "Linrad") == 0) {
+        return OUTPUT_TYPE_LINRAD;
+    } else if (strcasecmp(output_type_string, "SDRuno") == 0) {
+        return OUTPUT_TYPE_SDRUNO;
+    } else if (strcasecmp(output_type_string, "SDRconnect") == 0) {
+        return OUTPUT_TYPE_SDRCONNECT;
+    } else if (strcasecmp(output_type_string, "experimental") == 0) {
+        return OUTPUT_TYPE_EXPERIMENTAL;
+    } else {
+        return OUTPUT_TYPE_UNKNOWN;
+    }
 }

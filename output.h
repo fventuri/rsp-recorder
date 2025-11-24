@@ -17,5 +17,6 @@ extern short *outsamples;
 /* public functions */
 int output_open();
 void output_close();
+int output_validate_filename();
 
 #endif /* _OUTPUT_H */

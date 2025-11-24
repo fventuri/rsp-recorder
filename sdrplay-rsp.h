@@ -24,5 +24,6 @@ int sdrplay_validate_settings();
 int sdrplay_configure_rsp();
 int sdrplay_start_streaming();
 float sdrplay_get_current_gain(int tuner);
+unsigned long long estimate_data_size();
 
 #endif /* _SDRPLAY_RSP_H */

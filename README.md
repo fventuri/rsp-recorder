@@ -3,9 +3,10 @@
 `rsp-recorder` is a command line utility to record to disk the stream of I/Q samples from a SDRplay RSP radio. It works both with single tuner models, like RSP1B and RSPdx(-R2), and the RSPduo dual tuner model.
 
 The output formats are:
-  - raw - just the I/Q values as a stream of 16 bit shorts, i.e. I, Q for the single tuner case, and I tuner A, Q tuner A, I tuner B, Q tuner B for the dual tuner case
+  - WavViewDX-raw - just the I/Q values as a stream of 16 bit shorts, i.e. I, Q for the single tuner case, and I tuner A, Q tuner A, I tuner B, Q tuner B for the dual tuner case
   - Linrad, compatible with the Linrad SDR program
-  - WAV, which generates a WAV file in RIFF/RF64 format with two/four PCM channels (PCM is another way of calling a stream of 16 bit shorts, as described in the raw format)
+  - SDRuno, which generates a WAV file in RIFF/RF64 format with two/four PCM channels compatible with SDRuno and WavViewDX
+  - SDRconnect, which generates a WAV file in RIFF/RF64 format with two/four PCM channels compatible with SDRconnect and WavViewDX
 
 Most of the RSP parameters available though the API can be set through command line arguments; these include center frequency, sample rate, decimation, IF frequency, IF bandwidth, gains, notch filters, and several others (see below).
 
@@ -15,10 +16,10 @@ In the dual tuner case, settings that should be different between the two tuners
 
 In the dual tuner case, there are some settings, like decimation, that accept only one value, since the two tuners should always use the same decimation factor (if not, the two output streams would have a different sample rate).
 
-The files in WAV format contain a special chunk called 'auxi' that follows the specification from SpectraVue users guide.
+The files in SDRuno format contain a special chunk called 'auxi' that follows the same format used by SDRuno
 The two values 'unused4' and 'unused5' in the 'auxi' chunk contain the initial gains in 1/1000 of a dB (a 'milli dB'); in other words a value of 57539 means a gain of 57.539 dB. These gains shouldn't change during a recording unless AGC is enabled (see 'gains file' below).
 
-The WAV files in RF64 format can also optionally contain time markers stored in a 'r64m' chunk, following the format described EBU technical specification 3306 v1.1 (July 2009). The command line argument '-m' enables these time markers at specified intervals; for instance '-m 60' creates a marker at the beginning of each minute; '-m 900' creates markers at 0, 15, 30, and 45 minutes past the hour. The labels for these time markers are the timestamps in ISO8601/RFC3339 format (including nanoseconds; for instance '2025-11-18T15:55:45.123456789Z')
+There also an experimental WAV RF64 format that can optionally contain time markers stored in a 'r64m' chunk, following the format described EBU technical specification 3306 v1.1 (July 2009). The command line argument '-m' enables these time markers at specified intervals; for instance '-m 60' creates a marker at the beginning of each minute; '-m 900' creates markers at 0, 15, 30, and 45 minutes past the hour. The labels for these time markers are the timestamps in ISO8601/RFC3339 format (including nanoseconds; for instance '2025-11-18T15:55:45.123456789Z')
 
 The utility can also write a secondary file with the gain changes; anytime one of the gain values changes (because of AGC), a new entry is added to this file with:
    - sample number (uint64_t)
@@ -57,6 +58,9 @@ The `-r` argument selects the value of the RSP ADC sample rate, i.e. the first c
 ## Output filename
 
 The name of the output file containing the samples can be specified with the `-o` option. The output file name template supports the following 'variables', which will be replaced by their values when generating the actual file name:
+  - {WAVVIEWDX-RAW} will be replaced by 'iq_pcm16_ch<num_channels>_cf<center_freq>_sr<sampling_rate>_dt<datetime>' following the filename convention required by WavViewDX for raw I/Q files
+  - {SDRUNO} will be replaced by 'SDRuno_<UTC_datetime>_<center_freq_in_kHz>kHz' following the filename convention used by SDRuno
+  - {SDRCONNECT} will be replaced by 'SDRconnect_IQ_<datetime>_<center_freq>HZ' following the filename convention used by SDRconnect
   - {FREQ} will be replaced by the center frequency in Hz
   - {FREQHZ} will be replaced by the center frequency in Hz followed by 'Hz'
   - {FREQKHZ} will be replaced by the center frequency in kHz followed by 'kHz'
@@ -64,8 +68,8 @@ The name of the output file containing the samples can be specified with the `-o
   - {TSIS8601} will be replaced by the UTC timestamp at the beginning of the recording in IS08601 format
   - {LOCALTIME} will be replaced by the local time at the beginning of the recording in 'YYYYMMDD_HHMMSS+-TZOFFSET' format
 
-For instance, an output filename specified as 'RSP_recording_{TIMESTAMP}_{FREQHZ}.wav' could generate an output file with this actual name: RSP_recording_20251118_130947Z_162550000Hz.wav.
-An output filename specified as 'RSP_recording_{LOCALTIME}_{FREQHZ}.wav' could generate an output file with this actual name: RSP_recording_20251118_080947-0500_162550000Hz.wav.
+For instance, an output filename specified as '{SDRCONNECT}.wav' could generate an output file with this actual name: SDRconnect_IQ_20251123_173458_800000HZ.wav
+An output filename specified as '{WAVVIEWDX-RAW}.raw' could generate an output file with this actual name: iq_pcm16_ch1_cf800000_sr2000000_dt20251123-154313.raw
 
 
 ## Antenna names
@@ -110,7 +114,7 @@ These are the command line options for `rsp-recorder`:
 
     -c <configuration file>
     -s <RSP serial number>
-    -m <RSPduo mode> (1: single tuner, 2: dual tuner, 4: master, 8: slave)
+    -w <RSPduo mode> (1: single tuner, 2: dual tuner, 4: master, 8: slave)
     -a <antenna>
     -r <RSP sample rate>
     -d <decimation>
@@ -128,13 +132,11 @@ These are the command line options for `rsp-recorder`:
     -f <center frequency>
     -x <streaming time (s)> (default: 10s)
     -m <time marker interval (s)> (default: 0 -> no time markers)
+    -t <output file format> (one of: WavViewDX-raw, Linrad, SDRuno, SDRconnect, experimental)
     -o <output filename template>
     -z <zero sample gaps if smaller than size> (default: 100000)
     -j <blocks buffer capacity> (in number of blocks)
     -k <samples buffer capacity> (in number of samples)
-    -L output file in Linrad format
-    -R output file in raw format (i.e. just the samples)
-    -W output file in RIFF/RF64 format
     -G write gains file (default: disabled)
     -X enable SDRplay API debug log level (default: disabled)
     -v enable verbose mode (default: disabled)
@@ -179,8 +181,8 @@ These are the names for the settings:
   - `frequency`
   - `streaming time`
   - `marker interval`
-  - `output file`
   - `output type`
+  - `output file`
   - `gain file`
   - `zero sample gaps max size`
   - `blocks buffer capacity`
@@ -192,7 +194,7 @@ These are the names for the settings:
 
 Simple configuration file for recording with RSPdx in HDR mode
 ```
-# configuration file for HDR mode recording with RSPdx (raw I/Q values)
+# configuration file for HDR mode recording with RSPdx (compatible with SDRconnect and WavViewDX)
 # Franco Venturi - Thu Nov 20 07:52:16 AM EST 2025
 
 sample rate = 6000000
@@ -202,7 +204,8 @@ gRdB = AGC
 LNA state = 0
 HDR mode = true
 frequency = 875000
-output file = mw/RSPdx_HDR_mode_{TIMESTAMP}_{FREQHZ}.iq
+output type = SDRconnect
+output file = mw/{SDRCONNECT}.wav
 ```
 
 Simple configuration file for MW recording with RSPduo in dual tuner mode
@@ -216,8 +219,8 @@ IF bandwidth = 1536
 gRdB = AGC
 LNA state = 0
 frequency = 800000
-output file = mw/RSPduo_dual_tuner_{TIMESTAMP}_{FREQHZ}.raw
 output type = Linrad
+output file = mw/RSPduo_dual_tuner_{TIMESTAMP}_{FREQHZ}.raw
 ```
 
 
@@ -244,14 +247,19 @@ In this case too, the output file will have a sample rate of 2Msps.
 rsp-recorder -r 6000000 -i 1620 -b 1536 -g AGC -l 3 -f 162550000 -x 300
 ```
 
- - same as the first example, but streaming for one hour and writing to a WAV file with time markers at 0, 5, 10, 15, ..., 50, 55 minutes after the hour:
+ - same as the first example, but streaming for one hour and writing to a SDRuno-compatible file with time markers at 0, 5, 10, 15, ..., 50, 55 minutes after the hour:
 ```
-rsp-recorder -r 6000000 -i 1620 -b 1536 -l 3 -f 162550000 -x 3600 -W -m 300
+rsp-recorder -r 6000000 -i 1620 -b 1536 -l 3 -f 162550000 -x 3600 -t SDRuno
 ```
 
- - same as the the example above, but with AGC enabled and storing the gain values in a `.gains` file:
+ - same as the first example, streaming for one hour and writing to an experimental format file with time markers at 0, 5, 10, 15, ..., 50, 55 minutes after the hour:
 ```
-rsp-recorder -r 6000000 -i 1620 -b 1536 -g AGC -l 3 -f 162550000 -x 3600 -W -m 300 -G
+rsp-recorder -r 6000000 -i 1620 -b 1536 -l 3 -f 162550000 -x 3600 -t experimental -m 300
+```
+
+ - same as the the SDRuno example above, but with AGC enabled and storing the gain values in a `.gains` file:
+```
+rsp-recorder -r 6000000 -i 1620 -b 1536 -g AGC -l 3 -f 162550000 -x 3600 -t SDRuno -G
 ```
 
  - RDPdx recording using the configuration file above (`rspdx-hdr.conf`) for 10 minutes:
@@ -262,12 +270,12 @@ rsp-recorder -c rspdx-hdr.conf -x 600
 ### RSPduo in single tuner mode
 
 Most of the examples above also work with the RSPduo in single tuner mode.
-To select single tuner mode for the RSPduo use '-t 1' (or 'RSPduo mode = 1' in the config file).
+To select single tuner mode for the RSPduo use '-w 1' (or 'RSPduo mode = 1' in the config file).
 
 ### RSPduo in master mode
 
 Most of the examples above also work with the RSPduo in master mode.
-To select master mode for the RSPduo use '-t 4' (or 'RSPduo mode = 4' in the config file).
+To select master mode for the RSPduo use '-w 4' (or 'RSPduo mode = 4' in the config file).
 
 ### RSPduo in slave mode
 
@@ -291,7 +299,6 @@ rsp-recorder -c mw-dual-tuner.conf -x 600
   - SDRplay RSPduo Technical Information: https://www.sdrplay.com/wp-content/uploads/2018/06/RSPDuo-Technical-Information-R1P1.pdf
   - Linrad: https://www.sm5bsz.com/linuxdsp/linrad.htm
   - EBU Technical Specification 3306 - MBWF/RF64: An extended File Format for Audio - version 1.1, July 2009: https://tech.ebu.ch/docs/tech/tech3306v1_1.pdf
-  - SpectraVue User Guide version 3.18, Jan 27, 2013: https://www.moetronix.com/files/spectravue.pdf
 
 
 ## Copyright

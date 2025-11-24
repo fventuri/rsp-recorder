@@ -9,12 +9,21 @@
 #ifndef _CONFIG_H
 #define _CONFIG_H
 
-#include "typedefs.h"
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 #include <sdrplay_api.h>
 #pragma GCC diagnostic pop
+
+
+/* typedefs */
+typedef enum {
+    OUTPUT_TYPE_UNKNOWN,
+    OUTPUT_TYPE_WAVVIEWDX_RAW,
+    OUTPUT_TYPE_LINRAD,
+    OUTPUT_TYPE_SDRUNO,
+    OUTPUT_TYPE_SDRCONNECT,
+    OUTPUT_TYPE_EXPERIMENTAL = 99,
+} OutputType;
 
 
 /* global variables */

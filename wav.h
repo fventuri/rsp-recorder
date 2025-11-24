@@ -10,7 +10,11 @@
 #define _WAV_H
 
 /* public functions */
-int write_wav_header();
-int finalize_wav_file();
+int write_sdruno_header();
+int write_sdrconnect_header();
+int write_experimental_header();
+int finalize_sdruno_file();
+int finalize_sdrconnect_file();
+int finalize_experimental_file();
 
 #endif /* _WAV_H */
