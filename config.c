@@ -653,7 +653,7 @@ static int read_config_file(const char *config_file) {
             read_config_status = read_config_bool(value, &biasTEnable);
         } else if (strcasecmp(key, "HDR mode") == 0) {
             read_config_status = read_config_bool(value, &HDRmode);
-        } else if (strcasecmp(key, "HD mode bandwidth") == 0) {
+        } else if (strcasecmp(key, "HDR mode bandwidth") == 0) {
             read_config_status = read_config_int(value, (int *)(&hdr_mode_bandwidth));
         } else if (strcasecmp(key, "frequency") == 0) {
             read_config_status = read_config_two_doubles(value, &frequency_A, &frequency_B);
