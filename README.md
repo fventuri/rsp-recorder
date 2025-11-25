@@ -55,21 +55,41 @@ The `-r` argument selects the value of the RSP ADC sample rate, i.e. the first c
 |     6000000     |    1620      |    1536      |       3        | 2000000 |
 
 
-## Output filename
+## Output files: formats and filenames
 
-The name of the output file containing the samples can be specified with the `-o` option. The output file name template supports the following 'variables', which will be replaced by their values when generating the actual file name:
-  - {WAVVIEWDX-RAW} will be replaced by 'iq_pcm16_ch<num_channels>_cf<center_freq>_sr<sampling_rate>_dt<datetime>' following the filename convention required by WavViewDX for raw I/Q files
-  - {SDRUNO} will be replaced by 'SDRuno_<UTC_datetime>_<center_freq_in_kHz>kHz' following the filename convention used by SDRuno
-  - {SDRCONNECT} will be replaced by 'SDRconnect_IQ_<datetime>_<center_freq>HZ' following the filename convention used by SDRconnect
-  - {FREQ} will be replaced by the center frequency in Hz
-  - {FREQHZ} will be replaced by the center frequency in Hz followed by 'Hz'
-  - {FREQKHZ} will be replaced by the center frequency in kHz followed by 'kHz'
-  - {TIMESTAMP} will be replaced by the UTC timestamp at the beginning of the recording in 'YYYYMMDD_HHMMSS' format
-  - {TSIS8601} will be replaced by the UTC timestamp at the beginning of the recording in IS08601 format
-  - {LOCALTIME} will be replaced by the local time at the beginning of the recording in 'YYYYMMDD_HHMMSS+-TZOFFSET' format
+This `rsp-recorder` utility can record to output files in one of the following formats:
 
-For instance, an output filename specified as '{SDRCONNECT}.wav' could generate an output file with this actual name: SDRconnect_IQ_20251123_173458_800000HZ.wav
-An output filename specified as '{WAVVIEWDX-RAW}.raw' could generate an output file with this actual name: iq_pcm16_ch1_cf800000_sr2000000_dt20251123-154313.raw
+|     Output format       |        Example output filename         |         Default output filename         |
+| :---------------------- | :------------------------------------- | :-------------------------------------- |
+| WavViewDX-raw (default) |  iqdata/20251125/{WAVVIEWDX-RAW}.raw   | {WAVVIEWDX-RAW}.wav                     |
+| Linrad                  |  linradfiles/{TIMESTAMP}_{FREQ}.raw    | RSP_recording_{TIMESTAMP}_{FREQKHZ}.raw |
+| SDRuno                  |  mwrecordings/{SDRUNO}.wav             | {SDRUNO}.wav                            |
+| SDRconnect              |  mwrecordings/{SDRCONNECT}.wav         | {SDRCONNECT}.wav                        |
+| experimental            |  time_marked/{TIMESTAMP}_{FREQKHZ}.wav | RSP_recording_{TIMESTAMP}_{FREQKHZ}.wav |
+
+Because several programs including WavViewDX expect the filename to be in a very specific format to be able to parse it to extract center frequency and date/time, the output filename for the formats WavViewDX-raw, SDRuno, and SDRconnect must contain one of the predefined macros: '{WAVVIEWDX-RAW}', '{SDRUNO}', or '{SDRCONNECT}' (see examples above).
+
+The output file type is specified with the `-t` command line option (or with the `output type =` line in the config file), and the output filename is specified with the `-o` command line option (or with the `output file =` line in the config file).
+
+Since for Windows the folder separator is the `\` character, the output file names in Windows will look like this instead: `C:\Users\myuser\SDRrecordings\{SDRCONNECT}.wav`
+
+These are all the predefined macros supported for the output filename:
+  - `{WAVVIEWDX-RAW}` which will be replaced by 'iq_pcm16_ch<num_channels>_cf<center_freq>_sr<sampling_rate>_dt<datetime>' following the filename convention required by WavViewDX for raw I/Q files
+  - `{SDRUNO}` which will be replaced by 'SDRuno_<UTC_datetime>_<center_freq_in_kHz>kHz' following the filename convention used by SDRuno
+  - `{SDRCONNECT}` which will be replaced by 'SDRconnect_IQ_<datetime>_<center_freq>HZ' following the filename convention used by SDRconnect
+  - `{FREQ}` which will be replaced by the center frequency in Hz
+  - `{FREQHZ}` which will be replaced by the center frequency in Hz followed by `Hz`
+  - `{FREQKHZ}` which will be replaced by the center frequency in kHz followed by `kHz`
+  - `{TIMESTAMP}` which will be replaced by the UTC timestamp at the beginning of the recording in 'YYYYMMDD_HHMMSS' format
+  - `{TSIS8601}` which will be replaced by the UTC timestamp at the beginning of the recording in IS08601 format
+  - `{LOCALTIME}` which will be replaced by the local time at the beginning of the recording in 'YYYYMMDD_HHMMSS+-TZOFFSET' format
+
+These are a few examples of possible output filename genrated using the macros above:
+  - `{SDRCONNECT}.wav` could generate an output file with this actual name: `SDRconnect_IQ_20251123_173458_800000HZ.wav`
+  - `{WAVVIEWDX-RAW}.raw` could generate an output file with this actual name: `iq_pcm16_ch1_cf800000_sr2000000_dt20251123-154313.raw`
+  - `RSP_recording_{TIMESTAMP}_{FREQKHZ}.wav` could generate an output file with this actual name: `RSP_recording_20251124_003458Z_800kHz.wav`
+
+WavViewDX also allows for arbitrary text in the filename as long as it is at the end (i.e. right before the filename extension) and it begins with `_`. Therefore a valid output filename can also be like this: `<directory>/{SDRCONNECT}_your_text_here.wav`.
 
 
 ## Antenna names

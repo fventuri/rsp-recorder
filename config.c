@@ -57,9 +57,8 @@ double frequency_B = 100e6;
 /* streaming and output settings */
 int streaming_time = 10;  /* streaming time in seconds */
 int marker_interval = 0;  /* store a marker tick every N seconds */
-char *outfile_template = NULL;
 OutputType output_type = OUTPUT_TYPE_WAVVIEWDX_RAW;
-int write_auxi_chunk = 1;
+char *outfile_template = NULL;
 unsigned int zero_sample_gaps_max_size = 100000;
 #ifndef WIN32
 unsigned int blocks_buffer_capacity = 2000;
@@ -117,7 +116,6 @@ static void usage(const char* progname)
     fprintf(stderr, "    -L output file in Linrad format\n");
     fprintf(stderr, "    -R output file in raw format (i.e. just the samples)\n");
     fprintf(stderr, "    -W output file in RIFF/RF64 format\n");
-    fprintf(stderr, "    -A do not write auxi chunk\n");
     fprintf(stderr, "    -G write gains file (default: disabled)\n");
     fprintf(stderr, "    -X enable SDRplay API debug log level (default: disabled)\n");
     fprintf(stderr, "    -v enable verbose mode (default: disabled)\n");
@@ -661,12 +659,10 @@ static int read_config_file(const char *config_file) {
             read_config_status = read_config_int(value, &streaming_time);
         } else if (strcasecmp(key, "marker interval") == 0) {
             read_config_status = read_config_int(value, &marker_interval);
-        } else if (strcasecmp(key, "output file") == 0) {
-            read_config_status = read_config_string(value, (const char **)(&outfile_template));
         } else if (strcasecmp(key, "output type") == 0) {
             read_config_status = read_config_output_type(value, &output_type);
-        } else if (strcasecmp(key, "auxi chunk") == 0) {
-            read_config_status = read_config_bool(value, &write_auxi_chunk);
+        } else if (strcasecmp(key, "output file") == 0) {
+            read_config_status = read_config_string(value, (const char **)(&outfile_template));
         } else if (strcasecmp(key, "gains file") == 0) {
             read_config_status = read_config_bool(value, &gains_file_enable);
         } else if (strcasecmp(key, "zero sample gaps max size") == 0) {
