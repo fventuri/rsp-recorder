@@ -133,11 +133,11 @@ typedef enum {
 static WavType wav_type = WAV_TYPE_UNKNOWN;
 
 /* internal functions */
-static int write_riff_header();
-static int write_rf64_header();
+static int write_riff_header(uint16_t block_alignment);
+static int write_rf64_header(uint16_t block_alignment);
 static int write_data_header();
-static int finalize_riff_file(off_t data_chunk_offset);
-static int finalize_rf64_file(off_t data_chunk_offset);
+static int finalize_riff_file(off_t data_chunk_offset, uint32_t riff_size);
+static int finalize_rf64_file(unsigned long long riff_size);
 
 
 int write_sdruno_header() {
@@ -147,12 +147,13 @@ int write_sdruno_header() {
         fprintf(stderr, "warning: SRuno auxi chunk can store only one center frequency\n");
     }
 
+    uint16_t block_alignment = 2 * 2 * sizeof(short);
     if (wav_type == WAV_TYPE_RIFF) {
-        if (write_riff_header() == -1) {
+        if (write_riff_header(block_alignment) == -1) {
             return -1;
         }
     } else if (wav_type == WAV_TYPE_RF64) {
-        if (write_rf64_header() == -1) {
+        if (write_rf64_header(block_alignment) == -1) {
             return -1;
         }
     }
@@ -190,12 +191,13 @@ int write_sdruno_header() {
 int write_sdrconnect_header() {
     wav_type = estimate_data_size() < MAX_RIFF_SIZE ? WAV_TYPE_RIFF : WAV_TYPE_RF64;
 
+    uint16_t block_alignment = 2 * sizeof(short);
     if (wav_type == WAV_TYPE_RIFF) {
-        if (write_riff_header() == -1) {
+        if (write_riff_header(block_alignment) == -1) {
             return -1;
         }
     } else if (wav_type == WAV_TYPE_RF64) {
-        if (write_rf64_header() == -1) {
+        if (write_rf64_header(block_alignment) == -1) {
             return -1;
         }
     }
@@ -214,12 +216,13 @@ int write_experimental_header() {
         wav_type = WAV_TYPE_RF64;
     }
 
+    uint16_t block_alignment = 2 * 2 * sizeof(short);
     if (wav_type == WAV_TYPE_RIFF) {
-        if (write_riff_header() == -1) {
+        if (write_riff_header(block_alignment) == -1) {
             return -1;
         }
     } else if (wav_type == WAV_TYPE_RF64) {
-        if (write_rf64_header() == -1) {
+        if (write_rf64_header(block_alignment) == -1) {
             return -1;
         }
     }
@@ -256,15 +259,22 @@ int finalize_sdruno_file() {
         data_chunk_offset = sizeof(struct RIFFChunk) +
                             sizeof(struct FormatChunk) +
                             sizeof(struct AuxiChunk);
-        if (finalize_riff_file(data_chunk_offset) == -1) {
+        uint32_t riff_size = (uint32_t)(sizeof(char[4]) +
+                                        sizeof(struct FormatChunk) +
+                                        sizeof(struct AuxiChunk) +
+                                        sizeof(struct DataChunk) +
+                                        stats.data_size);
+        if (finalize_riff_file(data_chunk_offset, riff_size) == -1) {
             return -1;
         }
     } else if (wav_type == WAV_TYPE_RF64) {
-        data_chunk_offset = sizeof(struct RF64Chunk) +
-                            sizeof(struct DataSize64Chunk) +
-                            sizeof(struct FormatChunk) +
-                            sizeof(struct AuxiChunk);
-        if (finalize_rf64_file(data_chunk_offset) == -1) {
+        unsigned long long riff_size = sizeof(char[4]) +
+                                       sizeof(struct DataSize64Chunk) +
+                                       sizeof(struct FormatChunk) +
+                                       sizeof(struct AuxiChunk) +
+                                       sizeof(struct DataChunk) +
+                                       stats.data_size;
+        if (finalize_rf64_file(riff_size) == -1) {
             return -1;
         }
     }
@@ -312,14 +322,15 @@ int finalize_sdrconnect_file() {
     if (wav_type == WAV_TYPE_RIFF) {
         data_chunk_offset = sizeof(struct RIFFChunk) +
                             sizeof(struct FormatChunk);
-        if (finalize_riff_file(data_chunk_offset) == -1) {
+        // it's magic - SDRconnect RIFF is always 36 bytes less than data size
+        uint32_t riff_size = (uint32_t)(stats.data_size - 36);
+        if (finalize_riff_file(data_chunk_offset, riff_size) == -1) {
             return -1;
         }
     } else if (wav_type == WAV_TYPE_RF64) {
-        data_chunk_offset = sizeof(struct RF64Chunk) +
-                            sizeof(struct DataSize64Chunk) +
-                            sizeof(struct FormatChunk);
-        if (finalize_rf64_file(data_chunk_offset) == -1) {
+        // it's magic - SDRconnect RIFF is always 36 bytes more than data size
+        unsigned long long riff_size = stats.data_size + 36;
+        if (finalize_rf64_file(riff_size) == -1) {
             return -1;
         }
     }
@@ -340,15 +351,21 @@ int finalize_experimental_file() {
         data_chunk_offset = sizeof(struct RIFFChunk) +
                             sizeof(struct FormatChunk) +
                             markers_size;
-        if (finalize_riff_file(data_chunk_offset) == -1) {
+        uint32_t riff_size = (uint32_t)(sizeof(char[4]) +
+                                        sizeof(struct FormatChunk) +
+                                        sizeof(struct DataChunk) +
+                                        stats.data_size);
+        if (finalize_riff_file(data_chunk_offset, riff_size) == -1) {
             return -1;
         }
     } else if (wav_type == WAV_TYPE_RF64) {
-        data_chunk_offset = sizeof(struct RF64Chunk) +
-                            sizeof(struct DataSize64Chunk) +
-                            sizeof(struct FormatChunk) +
-                            markers_size;
-        if (finalize_rf64_file(data_chunk_offset) == -1) {
+        unsigned long long riff_size = sizeof(char[4]) +
+                                       sizeof(struct DataSize64Chunk) +
+                                       sizeof(struct FormatChunk) +
+                                       markers_size +
+                                       sizeof(struct DataChunk) +
+                                       stats.data_size;
+        if (finalize_rf64_file(riff_size) == -1) {
             return -1;
         }
     }
@@ -394,7 +411,7 @@ int finalize_experimental_file() {
 }
 
 /* internal functions */
-static int write_riff_header() {
+static int write_riff_header(uint16_t block_alignment) {
     struct RIFFChunk riff_chunk = {
         .chunkId = {'R', 'I', 'F', 'F'},
         .chunkSize = 0,
@@ -411,7 +428,7 @@ static int write_riff_header() {
         .channelCount = channelCount,
         .sampleRate = output_sample_rate,
         .bytesPerSecond = bytesPerSecond,
-        .blockAlignment = 2 * 2 * sizeof(short),
+        .blockAlignment = block_alignment,
         .bitsPerSample = 16
     };
 
@@ -425,7 +442,7 @@ static int write_riff_header() {
     return 0;
 }
 
-static int write_rf64_header() {
+static int write_rf64_header(uint16_t block_alignment) {
     struct RF64Chunk rf64_chunk = {
         .chunkId = {'R', 'F', '6', '4'},
         .chunkSize = 0xffffffff,
@@ -447,7 +464,7 @@ static int write_rf64_header() {
         .channelCount = channelCount,
         .sampleRate = output_sample_rate,
         .bytesPerSecond = bytesPerSecond,
-        .blockAlignment = 2 * 2 * sizeof(short),
+        .blockAlignment = block_alignment,
         .bitsPerSample = 16
     };
 
@@ -484,7 +501,7 @@ static int write_data_header() {
     return 0;
 }
 
-static int finalize_riff_file(off_t data_chunk_offset) {
+static int finalize_riff_file(off_t data_chunk_offset, uint32_t riff_size) {
     // fix data chunk size
     if (lseek(outputfd, data_chunk_offset + sizeof(char[4]), SEEK_SET) == -1) {
         fprintf(stderr, "lseek(data chunk size) failed: %s\n", strerror(errno));
@@ -500,11 +517,6 @@ static int finalize_riff_file(off_t data_chunk_offset) {
         fprintf(stderr, "lseek(RIFF chunk size) failed: %s\n", strerror(errno));
         return -1;
     }
-    uint32_t riff_size = (uint32_t)(data_chunk_offset -
-                                    sizeof(struct RIFFChunk) +
-                                    sizeof(char[4]) +
-                                    sizeof(struct DataChunk) +
-                                    stats.data_size);
     if (write(outputfd, &riff_size, sizeof(riff_size)) == -1) {
         return -1;
     }
@@ -512,13 +524,8 @@ static int finalize_riff_file(off_t data_chunk_offset) {
     return 0;
 }
 
-static int finalize_rf64_file(off_t data_chunk_offset) {
+static int finalize_rf64_file(unsigned long long riff_size) {
     // insert the RIFF size, 'data' chunk size and sample count in the 'ds64' chunk
-    unsigned long long riff_size = data_chunk_offset -
-                                   sizeof(struct RIFFChunk) +
-                                   sizeof(char[4]) +
-                                   sizeof(struct DataChunk) +
-                                   stats.data_size;
     struct DataSize64Chunk ds64_chunk = {
         .chunkId = {'d', 's', '6', '4'},
         .chunkSize = sizeof(struct DataSize64Chunk) - sizeof(char[4]) - sizeof(uint32_t),
