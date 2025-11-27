@@ -147,7 +147,7 @@ int write_sdruno_header() {
         fprintf(stderr, "warning: SRuno auxi chunk can store only one center frequency\n");
     }
 
-    uint16_t block_alignment = 2 * 2 * sizeof(short);
+    uint16_t block_alignment = 2 * sizeof(short);
     if (wav_type == WAV_TYPE_RIFF) {
         if (write_riff_header(block_alignment) == -1) {
             return -1;
@@ -268,6 +268,10 @@ int finalize_sdruno_file() {
             return -1;
         }
     } else if (wav_type == WAV_TYPE_RF64) {
+        data_chunk_offset = sizeof(struct RF64Chunk) +
+                            sizeof(struct DataSize64Chunk) +
+                            sizeof(struct FormatChunk) +
+                            sizeof(struct AuxiChunk);
         unsigned long long riff_size = sizeof(char[4]) +
                                        sizeof(struct DataSize64Chunk) +
                                        sizeof(struct FormatChunk) +
