@@ -18,6 +18,8 @@
 
 /* global variables */
 unsigned long long num_gain_changes[2] = {0L, 0L};
+unsigned long long num_power_overload_detected[2] = {0L, 0L};
+unsigned long long num_power_overload_corrected[2] = {0L, 0L};
 
 static unsigned int firstSampleNum = 0;
 
@@ -86,6 +88,24 @@ void event_callback(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, 
             gain_changes_resource->nready++;
             pthread_mutex_unlock(gain_changes_resource->lock);
         }
+    } else if (eventId == sdrplay_api_PowerOverloadChange) {
+        if (streaming_status == STREAMING_STATUS_STARTING ||
+            streaming_status == STREAMING_STATUS_RUNNING ||
+            streaming_status == STREAMING_STATUS_TERMINATE) {
+            int tuner_index = 0;
+            if (is_dual_tuner) {
+                tuner_index = tuner - 1;
+            }
+            switch (params->powerOverloadParams.powerOverloadChangeType) {
+            case sdrplay_api_Overload_Detected:
+                num_power_overload_detected[tuner_index]++;
+                break;
+            case sdrplay_api_Overload_Corrected:
+                num_power_overload_corrected[tuner_index]++;
+                break;
+            }
+        }
+        sdrplay_acknowledge_power_overload(tuner);
     }
     return;
 }

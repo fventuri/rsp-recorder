@@ -65,6 +65,9 @@ int print_stats() {
         fprintf(stderr, "Q samples range = [%hd,%hd]\n", rx_stats_A.qmin, rx_stats_A.qmax);
         fprintf(stderr, "samples per rx_callback range = [%u,%u]\n", rx_stats_A.num_samples_min, rx_stats_A.num_samples_max);
         fprintf(stderr, "output samples = %llu\n", stats.output_samples);
+        fprintf(stderr, "power overload detected events = %llu\n", num_power_overload_detected[0]);
+        fprintf(stderr, "power overload corrected events = %llu\n", num_power_overload_corrected[0]);
+        fprintf(stderr, "gain changes = %llu\n", num_gain_changes[0]);
     } else {
         /* dual tuner */
         /* estimate actual sample rate */
@@ -80,11 +83,13 @@ int print_stats() {
         fprintf(stderr, "Q samples range = [%hd,%hd] / [%hd,%hd]\n", rx_stats_A.qmin, rx_stats_A.qmax, rx_stats_B.qmin, rx_stats_B.qmax);
         fprintf(stderr, "samples per rx_callback range = [%u,%u] / [%u,%u]\n", rx_stats_A.num_samples_min, rx_stats_A.num_samples_max, rx_stats_B.num_samples_min, rx_stats_B.num_samples_max);
         fprintf(stderr, "output samples = %llu (x2)\n", stats.output_samples);
+        fprintf(stderr, "power overload detected events = %llu / %llu\n", num_power_overload_detected[0], num_power_overload_detected[1]);
+        fprintf(stderr, "power overload corrected events = %llu / %llu\n", num_power_overload_corrected[0], num_power_overload_corrected[1]);
+        fprintf(stderr, "gain changes = %llu / %llu\n", num_gain_changes[0], num_gain_changes[1]);
     }
     fprintf(stderr, "data size = %llu\n", stats.data_size);
     fprintf(stderr, "blocks buffer usage = %u/%u\n", blocks_resource.nused_max, blocks_resource.size);
     fprintf(stderr, "samples buffer usage = %u/%u\n", samples_resource.nused_max, samples_resource.size);
-    fprintf(stderr, "gain changes = %llu / %llu\n", num_gain_changes[0], num_gain_changes[1]);
     unsigned long long average_write_elapsed = stats.total_write_elapsed / stats.total_writes;
     fprintf(stderr, "average write elapsed = %llu.%09llu\n", average_write_elapsed / 1000000000ULL, average_write_elapsed % 1000000000ULL);
     fprintf(stderr, "max write elapsed = %llu.%09llu\n", stats.max_write_elapsed / 1000000000ULL, stats.max_write_elapsed % 1000000000ULL);

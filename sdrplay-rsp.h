@@ -23,6 +23,7 @@ int sdrplay_select_rsp();
 int sdrplay_validate_settings();
 int sdrplay_configure_rsp();
 int sdrplay_start_streaming();
+void sdrplay_acknowledge_power_overload(sdrplay_api_TunerSelectT tuner);
 float sdrplay_get_current_gain(int tuner);
 unsigned long long estimate_data_size();
 

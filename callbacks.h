@@ -41,6 +41,8 @@ typedef struct {
 
 /* global variables */
 extern unsigned long long num_gain_changes[2];
+extern unsigned long long num_power_overload_detected[2];
+extern unsigned long long num_power_overload_corrected[2];
 
 /* public functions */
 void rxA_callback(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params, unsigned int numSamples, unsigned int reset, void *cbContext);

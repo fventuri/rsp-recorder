@@ -690,6 +690,10 @@ int sdrplay_start_streaming() {
     return 0;
 }
 
+void sdrplay_acknowledge_power_overload(sdrplay_api_TunerSelectT tuner) {
+    sdrplay_api_Update(device.dev, tuner, sdrplay_api_Update_Ctrl_OverloadMsgAck, sdrplay_api_Update_Ext1_None);
+}
+
 float sdrplay_get_current_gain(int tuner) {
     switch (tuner) {
     case 0:
