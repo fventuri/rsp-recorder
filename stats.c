@@ -11,6 +11,7 @@
 #include "stats.h"
 
 #include <limits.h>
+#include <math.h>
 #include <stdio.h>
 
 /* global variables */
@@ -50,6 +51,9 @@ RXStats rx_stats_B = {
     .qmax = SHRT_MIN,
 };
 
+/* internal functions */
+double get_dynamic_range(short imin, short imax, short qmin, short qmax);
+
 
 int print_stats() {
     if (!is_dual_tuner) {
@@ -63,6 +67,7 @@ int print_stats() {
         fprintf(stderr, "actual sample rate = %.0lf\n", actual_sample_rate);
         fprintf(stderr, "I samples range = [%hd,%hd]\n", rx_stats_A.imin, rx_stats_A.imax);
         fprintf(stderr, "Q samples range = [%hd,%hd]\n", rx_stats_A.qmin, rx_stats_A.qmax);
+        fprintf(stderr, "I/Q dynamic range = %.1lf dBFS\n", get_dynamic_range(rx_stats_A.imin, rx_stats_A.imax, rx_stats_A.qmin, rx_stats_A.qmax));
         fprintf(stderr, "samples per rx_callback range = [%u,%u]\n", rx_stats_A.num_samples_min, rx_stats_A.num_samples_max);
         fprintf(stderr, "output samples = %llu\n", stats.output_samples);
         fprintf(stderr, "power overload detected events = %llu\n", num_power_overload_detected[0]);
@@ -81,6 +86,9 @@ int print_stats() {
         fprintf(stderr, "actual sample rate = %.0lf / %.0lf\n", actual_sample_rate_A, actual_sample_rate_B);
         fprintf(stderr, "I samples range = [%hd,%hd] / [%hd,%hd]\n", rx_stats_A.imin, rx_stats_A.imax, rx_stats_B.imin, rx_stats_B.imax);
         fprintf(stderr, "Q samples range = [%hd,%hd] / [%hd,%hd]\n", rx_stats_A.qmin, rx_stats_A.qmax, rx_stats_B.qmin, rx_stats_B.qmax);
+        fprintf(stderr, "I/Q dynamic range = %.1lf dBFS / %.1lf dBFS\n",
+            get_dynamic_range(rx_stats_A.imin, rx_stats_A.imax, rx_stats_A.qmin, rx_stats_A.qmax),
+            get_dynamic_range(rx_stats_B.imin, rx_stats_B.imax, rx_stats_B.qmin, rx_stats_B.qmax));
         fprintf(stderr, "samples per rx_callback range = [%u,%u] / [%u,%u]\n", rx_stats_A.num_samples_min, rx_stats_A.num_samples_max, rx_stats_B.num_samples_min, rx_stats_B.num_samples_max);
         fprintf(stderr, "output samples = %llu (x2)\n", stats.output_samples);
         fprintf(stderr, "power overload detected events = %llu / %llu\n", num_power_overload_detected[0], num_power_overload_detected[1]);
@@ -99,4 +107,26 @@ int print_stats() {
     fprintf(stderr, "zero writes = %llu\n", stats.zero_writes);
 
     return 0;
+}
+
+/* internal functions */
+double get_dynamic_range(short imin, short imax, short qmin, short qmax) {
+    double iq_over_fs_max = 0.0;
+    if (imin < 0) {
+        double r = (double) imin / SHRT_MIN;
+        iq_over_fs_max = r > iq_over_fs_max ? r : iq_over_fs_max;
+    }
+    if (imax > 0) {
+        double r = (double) imax / SHRT_MAX;
+        iq_over_fs_max = r > iq_over_fs_max ? r : iq_over_fs_max;
+    }
+    if (qmin < 0) {
+        double r = (double) qmin / SHRT_MIN;
+        iq_over_fs_max = r > iq_over_fs_max ? r : iq_over_fs_max;
+    }
+    if (qmax > 0) {
+        double r = (double) qmax / SHRT_MAX;
+        iq_over_fs_max = r > iq_over_fs_max ? r : iq_over_fs_max;
+    }
+    return 20.0 * log10(iq_over_fs_max);
 }
