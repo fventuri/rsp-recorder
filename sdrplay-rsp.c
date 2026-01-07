@@ -246,6 +246,7 @@ int sdrplay_configure_rsp() {
     }
     if (device_params->devParams != NULL) {
         device_params->devParams->fsFreq.fsHz = sample_rate;
+        device_params->devParams->ppm = ppm;
     }
     if (rspduo_mode == sdrplay_api_RspDuoMode_Dual_Tuner) {
         sdrplay_api_RxChannelParamsT *rx_channelA_params = device_params->rxChannelA;
@@ -720,7 +721,7 @@ static void sdrplay_print_settings() {
             }
         }
         if (device_params->devParams != NULL) {
-            fprintf(stderr, "SerNo=%s hwVer=%d tuner=0x%02x rspSampleFreq=%.0lf internalDecimation=%d\n", device.SerNo, device.hwVer, device.tuner, device_params->devParams->fsFreq.fsHz, internal_decimation);
+            fprintf(stderr, "SerNo=%s hwVer=%d tuner=0x%02x rspSampleFreq=%.0lf ppm=%lf internalDecimation=%d\n", device.SerNo, device.hwVer, device.tuner, device_params->devParams->fsFreq.fsHz, device_params->devParams->ppm, internal_decimation);
         } else {
             fprintf(stderr, "SerNo=%s hwVer=%d tuner=0x%02x internalDecimation=%d\n", device.SerNo, device.hwVer, device.tuner, internal_decimation);
         }

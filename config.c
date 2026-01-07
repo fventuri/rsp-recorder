@@ -32,6 +32,7 @@ sdrplay_api_RspDuoModeT rspduo_mode = sdrplay_api_RspDuoMode_Unknown;
 const char *antenna = NULL;
 double sample_rate = 0.0;
 int decimation = 1;
+double ppm = 0.0;
 sdrplay_api_If_kHzT if_frequency = sdrplay_api_IF_Zero;
 sdrplay_api_Bw_MHzT if_bandwidth = sdrplay_api_BW_0_200;
 sdrplay_api_AgcControlT agc_A = sdrplay_api_AGC_DISABLE;
@@ -94,6 +95,7 @@ static void usage(const char* progname)
     fprintf(stderr, "    -a <antenna>\n");
     fprintf(stderr, "    -r <RSP sample rate>\n");
     fprintf(stderr, "    -d <decimation>\n");
+    fprintf(stderr, "    -p <frequency correction/ppm>\n");
     fprintf(stderr, "    -i <IF frequency>\n");
     fprintf(stderr, "    -b <IF bandwidth>\n");
     fprintf(stderr, "    -g <IF gain reduction> (\"AGC\" to enable AGC)\n");
@@ -126,7 +128,7 @@ static void usage(const char* progname)
 int get_config_from_cli(int argc, char *argv[])
 {
     int c;
-    while ((c = getopt(argc, argv, "c:s:w:a:r:d:i:b:g:l:n:DIy:BHu:f:x:m:t:o:z:j:k:GXvh")) != -1) {
+    while ((c = getopt(argc, argv, "c:s:w:a:r:p:d:i:b:g:l:n:DIy:BHu:f:x:m:t:o:z:j:k:GXvh")) != -1) {
         int n;
         switch (c) {
             case 'c':
@@ -156,6 +158,12 @@ int get_config_from_cli(int argc, char *argv[])
             case 'd':
                 if (sscanf(optarg, "%d", &decimation) != 1) {
                     fprintf(stderr, "invalid decimation: %s\n", optarg);
+                    return -1;
+                }
+                break;
+            case 'p':
+                if (sscanf(optarg, "%lf", &ppm) != 1) {
+                    fprintf(stderr, "invalid frequency correction/ppm: %s\n", optarg);
                     return -1;
                 }
                 break;
@@ -621,6 +629,8 @@ static int read_config_file(const char *config_file) {
             read_config_status = read_config_double(value, &sample_rate);
         } else if (strcasecmp(key, "decimation") == 0) {
             read_config_status = read_config_int(value, &decimation);
+        } else if (strcasecmp(key, "frequency correction") == 0 || strcasecmp(key, "ppm") == 0) {
+            read_config_status = read_config_double(value, &ppm);
         } else if (strcasecmp(key, "IF frequency") == 0) {
             read_config_status = read_config_int(value, (int *)(&if_frequency));
         } else if (strcasecmp(key, "IF bandwidth") == 0) {

@@ -8,7 +8,7 @@ The output formats are:
   - SDRuno, which generates a WAV file in RIFF/RF64 format with two/four PCM channels compatible with SDRuno and WavViewDX
   - SDRconnect, which generates a WAV file in RIFF/RF64 format with two/four PCM channels compatible with SDRconnect and WavViewDX
 
-Most of the RSP parameters available though the API can be set through command line arguments; these include center frequency, sample rate, decimation, IF frequency, IF bandwidth, gains, notch filters, and several others (see below).
+Most of the RSP parameters available though the API can be set through command line arguments; these include center frequency, sample rate, decimation, ppm, IF frequency, IF bandwidth, gains, notch filters, and several others (see below).
 
 In the dual tuner case, settings that should be different between the two tuners can be assigned by separating the values with a comma. For instance:
   - `-l 3` sets the LNA state for both tuners at 3
@@ -138,6 +138,7 @@ These are the command line options for `rsp-recorder`:
     -a <antenna>
     -r <RSP sample rate>
     -d <decimation>
+    -p <frequency correction/ppm>
     -i <IF frequency>
     -b <IF bandwidth>
     -g <IF gain reduction> ("AGC" to enable AGC)
@@ -180,8 +181,9 @@ These are the names for the settings:
   - `serial number`
   - `RSPduo mode`
   - `antenna`
-  - `sample rate` (Or `RSP sample rate`)
+  - `sample rate` (or `RSP sample rate`)
   - `decimation`
+  - `frequency correction` (or `ppm`)
   - `IF frequency`
   - `IF bandwidth`
   - `gRdB` (or `IFGR`)

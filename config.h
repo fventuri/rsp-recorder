@@ -33,6 +33,7 @@ extern sdrplay_api_RspDuoModeT rspduo_mode;
 extern const char *antenna;
 extern double sample_rate;
 extern int decimation;
+extern double ppm;
 extern sdrplay_api_If_kHzT if_frequency;
 extern sdrplay_api_Bw_MHzT if_bandwidth;
 extern sdrplay_api_AgcControlT agc_A;
