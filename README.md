@@ -74,7 +74,7 @@ The output file type is specified with the `-t` command line option (or with the
 Since for Windows the folder separator is the `\` character, the output file names in Windows will look like this instead: `C:\Users\myuser\SDRrecordings\{SDRCONNECT}.wav`
 
 These are all the predefined macros supported for the output filename:
-  - `{WAVVIEWDX-RAW}` which will be replaced by 'iq_pcm16_ch<num_channels>_cf<center_freq>_sr<sampling_rate>_dt<datetime>' following the filename convention required by WavViewDX for raw I/Q files
+  - `{WAVVIEWDX-RAW}` which will be replaced by 'iq_pcm16_ch<num_channels>_cf<center_freq>_sr<sampling_rate>_dt<datetime>' following the filename convention required by WavViewDX for raw I/Q files. `{WAVVIEWDX-RAW}z` will output the timestamp in UTC
   - `{SDRUNO}` which will be replaced by 'SDRuno_<UTC_datetime>_<center_freq_in_kHz>kHz' following the filename convention used by SDRuno
   - `{SDRCONNECT}` which will be replaced by 'SDRconnect_IQ_<datetime>_<center_freq>HZ' following the filename convention used by SDRconnect
   - `{FREQ}` which will be replaced by the center frequency in Hz
@@ -87,6 +87,7 @@ These are all the predefined macros supported for the output filename:
 These are a few examples of possible output filename genrated using the macros above:
   - `{SDRCONNECT}.wav` could generate an output file with this actual name: `SDRconnect_IQ_20251123_173458_800000HZ.wav`
   - `{WAVVIEWDX-RAW}.raw` could generate an output file with this actual name: `iq_pcm16_ch1_cf800000_sr2000000_dt20251123-154313.raw`
+  - `{WAVVIEWDX-RAW}z.raw` could generate an output file with this actual name: `iq_pcm16_ch1_cf800000_sr2000000_dt20251123-204313z.raw` (timestamp in UTC)
   - `RSP_recording_{TIMESTAMP}_{FREQKHZ}.wav` could generate an output file with this actual name: `RSP_recording_20251124_003458Z_800kHz.wav`
 
 WavViewDX also allows for arbitrary text in the filename as long as it is at the end (i.e. right before the filename extension) and it begins with `_`. Therefore a valid output filename can also be like this: `<directory>/{SDRCONNECT}_your_text_here.wav`.

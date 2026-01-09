@@ -165,8 +165,9 @@ int output_validate_filename() {
         const char *pe = ps + wavviewdx_raw_placeholder_len;
         if (!((ps == outfile_template || *(ps-1) == '/' || *(ps-1) == '\\') &&
                (pe + 4 <= outfile_template + strlen(outfile_template)) &&
-               (*pe == '.' || *pe == '_'))) {
-            fprintf(stderr, "for WavViewDX-raw files the string '{WAVVIEWDX-RAW}' must be at the beginning of the output filename and must be followed by either '.' or '_'\n");
+               (*pe == '.' || *pe == '_' ||
+               (*pe == 'z' && (*(pe+1) == '.' || *(pe+1) == '_'))))) {
+            fprintf(stderr, "for WavViewDX-raw files the string '{WAVVIEWDX-RAW}' must be at the beginning of the output filename and must be followed by '.', '_', or 'z'\n");
             return -1;
         }
         if (strstr(outfile_template, sdruno_placeholder) != NULL || strstr(outfile_template, sdrconnect_placeholder) != NULL) {
@@ -247,9 +248,13 @@ static int generate_output_filename(char *output_filename, int output_filename_m
         dst += sz;
         if (strncmp(src, wavviewdx_raw_placeholder, wavviewdx_raw_placeholder_len) == 0) {
             sz = dstlast - dst;
-            struct tm *localtm = localtime(&t);
             char tsbuf[16];
-            strftime(tsbuf, sizeof(tsbuf), "%Y%m%d-%H%M%S", localtm);
+            if (*(src + wavviewdx_raw_placeholder_len) == 'z') {
+                strftime(tsbuf, sizeof(tsbuf), "%Y%m%d-%H%M%S", tm);
+            } else {
+                struct tm *localtm = localtime(&t);
+                strftime(tsbuf, sizeof(tsbuf), "%Y%m%d-%H%M%S", localtm);
+            }
             size_t nwvdr = snprintf(dst, sz, "iq_pcm16_ch%d_cf%.0lf_sr%.0lf_dt%s", is_dual_tuner ? 2 :1, frequency_A, output_sample_rate, tsbuf);
             if (nwvdr >= sz)
                 return -1;
