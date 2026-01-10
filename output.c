@@ -12,6 +12,7 @@
 #include "sdrplay-rsp.h"
 #include "wav.h"
 
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -21,6 +22,10 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#ifdef WIN32
+// _setmode
+#include <io.h>
+#endif /* WIN32 */
 
 #ifndef O_BINARY
 #define O_BINARY 0
@@ -58,6 +63,24 @@ int output_open() {
             return -1;
         }
         outputfd = fileno(stdout);
+#ifdef WIN32
+        _setmode(outputfd, _O_BINARY);
+#endif
+    } else if (output_filename[0] == '|') {
+        if (!(output_type == OUTPUT_TYPE_WAVVIEWDX_RAW || output_type == OUTPUT_TYPE_LINRAD)) {
+            fprintf(stderr, "named pipe is only supported for WavViewDX-raw and Linrad formats\n");
+            return -1;
+        }
+        int startidx = 1;
+        int endidx = strlen(output_filename);
+        while (startidx < endidx && isspace(output_filename[startidx]))
+            startidx++;
+        char * output_pipename = output_filename + startidx;
+        if (strlen(output_pipename) == 0) {
+            fprintf(stderr, "empty named pipe name\n");
+            return -1;
+        }
+        outputfd = open(output_pipename, O_WRONLY | O_BINARY);
     } else {
         outputfd = open(output_filename, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, 0644);
     }
@@ -157,6 +180,9 @@ int output_validate_filename() {
     int sdrconnect_placeholder_len = sizeof(sdrconnect_placeholder) - 1;
 
     if (output_type == OUTPUT_TYPE_WAVVIEWDX_RAW) {
+        if (strcmp(outfile_template, "-") == 0 || outfile_template[0] == '|') {
+            return 0;
+        }
         const char *ps = strstr(outfile_template, wavviewdx_raw_placeholder);
         if (ps == NULL) {
             fprintf(stderr, "output type WavViewDX-raw requires '{WAVVIEWDX-RAW}' in the output filename\n");

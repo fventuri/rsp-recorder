@@ -92,6 +92,12 @@ These are a few examples of possible output filename genrated using the macros a
 
 WavViewDX also allows for arbitrary text in the filename as long as it is at the end (i.e. right before the filename extension) and it begins with `_`. Therefore a valid output filename can also be like this: `<directory>/{SDRCONNECT}_your_text_here.wav`.
 
+### Output to stdout or named pipes (FIFOs)
+
+With WavViewDX and Linrad formats only it is possible to write the output to stdout or to a named pipe (FIFO):
+  - if the output filename is `-`, then the ouput will be written to stdout
+  - if the output filename begins with `|` (for instance `| \\.\pipe\IQdata`), then the output will be written to the named pipe/FIFO `\\.\pipe\IQdata` (you may need to double the `\`s to escape them)
+
 
 ## Antenna names
 
