@@ -406,7 +406,7 @@ static int sdrplay_internal_decimation(double fs, sdrplay_api_If_kHzT ifreq, sdr
 }
 
 static int sdrplay_select_antenna(sdrplay_api_DeviceParamsT *device_params) {
-    if (device.hwVer == SDRPLAY_RSP1_ID || device.hwVer == SDRPLAY_RSP1A_ID || SDRPLAY_RSP1B_ID) {
+    if (device.hwVer == SDRPLAY_RSP1_ID || device.hwVer == SDRPLAY_RSP1A_ID || device.hwVer == SDRPLAY_RSP1B_ID) {
         if (antenna != NULL) {
             fprintf(stderr, "No antenna selection for this RSP model\n");
             return -1;
@@ -455,7 +455,7 @@ static int sdrplay_select_notch_filter(sdrplay_api_DeviceParamsT *device_params)
            fprintf(stderr, "No notch filters for this RSP model\n");
            return -1;
        }
-    } else if (device.hwVer == SDRPLAY_RSP1A_ID || SDRPLAY_RSP1B_ID) {
+    } else if (device.hwVer == SDRPLAY_RSP1A_ID || device.hwVer == SDRPLAY_RSP1B_ID) {
         device_params->devParams->rsp1aParams.rfNotchEnable = RFNotch;
         device_params->devParams->rsp1aParams.rfDabNotchEnable = DABNotch;
         if (rspDuoAMNotch) {
@@ -490,7 +490,7 @@ static int sdrplay_enable_bias_t(sdrplay_api_DeviceParamsT *device_params) {
     if (device.hwVer == SDRPLAY_RSP1_ID) {
         fprintf(stderr, "Bias-T not supported for this RSP model\n");
         return -1;
-    } else if (device.hwVer == SDRPLAY_RSP1A_ID || SDRPLAY_RSP1B_ID) {
+    } else if (device.hwVer == SDRPLAY_RSP1A_ID || device.hwVer == SDRPLAY_RSP1B_ID) {
         sdrplay_api_RxChannelParamsT *rx_channel_params = device_params->rxChannelA;
         rx_channel_params->rsp1aTunerParams.biasTEnable = biasTEnable;
     } else if (device.hwVer == SDRPLAY_RSP2_ID) {
