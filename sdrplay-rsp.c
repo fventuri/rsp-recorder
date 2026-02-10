@@ -23,7 +23,7 @@
 
 /* global variables */
 bool is_dual_tuner = false;
-int internal_decimation = 1;
+int internal_decimation = -1;
 double output_sample_rate = 0;
 
 static sdrplay_api_DeviceT device;
@@ -144,6 +144,12 @@ int sdrplay_select_rsp()
     }
     device = devices[device_index];
 
+    internal_decimation = sdrplay_internal_decimation(sample_rate, if_frequency, if_bandwidth);
+    if (internal_decimation == -1) {
+        fprintf(stderr, "invalid sample rate or IF bandwidth for Low-IF mode\n");
+        return -1;
+    }
+
     if (device.hwVer != SDRPLAY_RSPduo_ID) {
         if (!(rspduo_mode == sdrplay_api_RspDuoMode_Unknown || rspduo_mode == sdrplay_api_RspDuoMode_Single_Tuner)) {
             fprintf(stderr, "non RSPduo's only support single tuner mode\n");
@@ -152,9 +158,8 @@ int sdrplay_select_rsp()
         rspduo_mode = sdrplay_api_RspDuoMode_Unknown;
     } else {
         /* select RSPduo mode */
-        internal_decimation = sdrplay_internal_decimation(sample_rate, if_frequency, if_bandwidth);
         if (rspduo_mode == sdrplay_api_RspDuoMode_Unknown) {
-            if (internal_decimation > 1) {
+            if (if_frequency != sdrplay_api_IF_Zero) {
                 if ((device.rspDuoMode & sdrplay_api_RspDuoMode_Dual_Tuner) == sdrplay_api_RspDuoMode_Dual_Tuner) {
                     rspduo_mode = sdrplay_api_RspDuoMode_Dual_Tuner;
                 } else if ((device.rspDuoMode & sdrplay_api_RspDuoMode_Slave) == sdrplay_api_RspDuoMode_Slave) {
@@ -167,7 +172,7 @@ int sdrplay_select_rsp()
                 rspduo_mode = sdrplay_api_RspDuoMode_Single_Tuner;
             }
         } else {
-            if (!(rspduo_mode == sdrplay_api_RspDuoMode_Single_Tuner || internal_decimation >1)) {
+            if (!(rspduo_mode == sdrplay_api_RspDuoMode_Single_Tuner || if_frequency != sdrplay_api_IF_Zero)) {
                 fprintf(stderr, "SDRplay RSPduo dual tuner/master/slave modes are not supported with this set of (sample rate, IF frequency, IF bandwidth)\n");
                 return -1;
             }
@@ -244,6 +249,7 @@ int sdrplay_configure_rsp() {
         fprintf(stderr, "sdrplay_api_GetDeviceParams() failed: %s\n", sdrplay_api_GetErrorString(err));
         return -1;
     }
+
     if (device_params->devParams != NULL) {
         device_params->devParams->fsFreq.fsHz = sample_rate;
         device_params->devParams->ppm = ppm;
@@ -367,13 +373,16 @@ int sdrplay_configure_rsp() {
         rx_channel_params->tunerParams.rfFreq.rfHz = frequency_A;
     }
 
-    internal_decimation = sdrplay_internal_decimation(sample_rate, if_frequency, if_bandwidth);
     output_sample_rate = sample_rate / internal_decimation / decimation;
 
     return 0;
 }
 
 static int sdrplay_internal_decimation(double fs, sdrplay_api_If_kHzT ifreq, sdrplay_api_Bw_MHzT bw) {
+    if (ifreq == sdrplay_api_IF_Zero) {
+        return 1;
+    }
+
     typedef struct {
         double sample_rate;
         sdrplay_api_If_kHzT if_frequency;
@@ -402,7 +411,7 @@ static int sdrplay_internal_decimation(double fs, sdrplay_api_If_kHzT ifreq, sdr
             return internal_decimations[i].decimation;
         }
     }
-    return 1;
+    return -1;
 }
 
 static int sdrplay_select_antenna(sdrplay_api_DeviceParamsT *device_params) {
