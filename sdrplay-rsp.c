@@ -428,7 +428,7 @@ static int sdrplay_select_antenna(sdrplay_api_DeviceParamsT *device_params) {
         }
     } else if (device.hwVer == SDRPLAY_RSPduo_ID) {
         sdrplay_api_RxChannelParamsT *rx_channel_params = device_params->rxChannelA;
-        if (strcmp(antenna, "High Z") == 0) {
+        if (antenna != NULL && strcmp(antenna, "High Z") == 0) {
             rx_channel_params->rspDuoTunerParams.tuner1AmPortSel = sdrplay_api_RspDuo_AMPORT_1;
         } else {
             rx_channel_params->rspDuoTunerParams.tuner1AmPortSel = sdrplay_api_RspDuo_AMPORT_2;
