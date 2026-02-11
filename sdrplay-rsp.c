@@ -336,6 +336,8 @@ int sdrplay_configure_rsp() {
                 return -1;
             }
         }
+        rx_channel_params->ctrlParams.decimation.enable = decimation > 1;
+        rx_channel_params->ctrlParams.decimation.decimationFactor = decimation;
         if (sdrplay_select_antenna(device_params) != 0) {
             return -1;
         }
