@@ -8,6 +8,10 @@ The output formats are:
   - SDRuno, which generates a WAV file in RIFF/RF64 format with two/four PCM channels compatible with SDRuno and WavViewDX
   - SDRconnect, which generates a WAV file in RIFF/RF64 format with two/four PCM channels compatible with SDRconnect and WavViewDX
 
+**IMPORTANT**: for dual tuner recordings with the RSPduo use only the first two output formats above: 
+  - WavViewDX-raw (default) - works with WavViewDX
+  - Linrad - works with WavViewDX and Linrad
+
 Most of the RSP parameters available though the API can be set through command line arguments; these include center frequency, sample rate, decimation, ppm, IF frequency, IF bandwidth, gains, notch filters, and several others (see below).
 
 In the dual tuner case, settings that should be different between the two tuners can be assigned by separating the values with a comma. For instance:
@@ -172,7 +176,7 @@ These are the command line options for `rsp-recorder`:
 
 ## Configuration file(s)
 
-All the settings for dual tuner recorder can be read from a configuration file in the format shown below.
+All the settings for rsp-recorder can be read from a configuration file in the format shown below.
 
 Multiple configuration files can be specified by the using the `-c` argument multiple times in the command line. 
 
