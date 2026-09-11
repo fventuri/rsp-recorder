@@ -5,14 +5,12 @@ on:
     tags:
       - '**'
 
-env:
-  SDRPLAY_SOFTWARE_DOWNLOADS: 'https://www.sdrplay.com/software'
-
 jobs:
   windows-build:
     name: Windows cross-compile
     runs-on: ubuntu-24.04
     env:
+      SDRPLAY_API_WINDOWS_URL: 'https://sdrplay.com/download/hardware-api-windows/?wpdmdl=1905'
       SDRPLAY_API_FILE_WINDOWS: SDRplay_RSP_API-Windows-3.15.exe
       SDRPLAY_API_EXTRACT_DIR: /tmp/SDRplay
     steps:
@@ -20,7 +18,7 @@ jobs:
         run: sudo apt update -qq && sudo apt install -y mingw-w64 innoextract
       - name: Install SDRplay API
         run: |
-          curl -s -S -O "$SDRPLAY_SOFTWARE_DOWNLOADS/$SDRPLAY_API_FILE_WINDOWS"
+          curl -s -S -L -o "$SDRPLAY_API_FILE_WINDOWS" "$SDRPLAY_API_WINDOWS_URL"
           innoextract "$SDRPLAY_API_FILE_WINDOWS" -I app/API -d "$SDRPLAY_API_EXTRACT_DIR"
           sudo mv "$SDRPLAY_API_EXTRACT_DIR/app/API/inc/sdrplay_api"*.h /usr/local/include/
           sudo mv "$SDRPLAY_API_EXTRACT_DIR/app/API/x64/sdrplay_api".* /usr/local/lib/
