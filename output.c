@@ -264,7 +264,7 @@ static int generate_output_filename(char *output_filename, int output_filename_m
     const char *src = outfile_template;
     char *dst = output_filename;
     char *dstlast = dst + output_filename_max_size - 1;
-    char *p;
+    const char *p;
     while ((p = strchr(src, '{')) != NULL) {
         size_t sz = p - src;
         if (dst + sz > dstlast)
@@ -382,7 +382,7 @@ static int generate_output_filename(char *output_filename, int output_filename_m
 
 static int generate_gains_filename(const char *output_filename, char *gains_filename, int gains_filename_max_size) {
     const char gains_extension[] = ".gains";
-    char *p = strrchr(output_filename, '.');
+    const char *p = strrchr(output_filename, '.');
     size_t sz = (size_t)(p - output_filename);
     if (sz + sizeof(gains_extension) > (size_t)gains_filename_max_size)
         return -1;

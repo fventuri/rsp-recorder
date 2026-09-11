@@ -154,6 +154,7 @@ These are the command line options for `rsp-recorder`:
     -b <IF bandwidth>
     -g <IF gain reduction> ("AGC" to enable AGC)
     -l <LNA state>
+    -q AGC parameters <setPoint_dBfs,attack_ms,decay_ms,decay_delay_ms,decay_threshold_dB> (default: -60,0,0,0,0)
     -n <notch filter> (one of: RF, DAB, or RSPduo-AM)
     -D disable post tuner DC offset compensation (default: enabled)
     -I disable post tuner I/Q balance compensation (default: enabled)
@@ -199,6 +200,11 @@ These are the names for the settings:
   - `IF bandwidth`
   - `gRdB` (or `IFGR`)
   - `LNA state` (or `RFGR`)
+  - `AGC setPoint dBfs` (or `setPoint dBfs`)
+  - `AGC attack ms` (or `attack ms`)
+  - `AGC decay ms` (or `decay ms`)
+  - `AGC decay delay ms` (or `decay delay ms`)
+  - `AGC decay threshold dB` (or `decay threshold dB`)
   - `RF notch`
   - `DAB notch`
   - `RSPduo AM notch`

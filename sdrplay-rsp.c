@@ -271,6 +271,13 @@ int sdrplay_configure_rsp() {
             rx_channelA_params->tunerParams.gain.gRdB = gRdB_A;
         }
         rx_channelA_params->tunerParams.gain.LNAstate = LNAstate_A;
+        if (rx_channelA_params->ctrlParams.agc.enable == sdrplay_api_AGC_CTRL_EN) {
+           rx_channelA_params->ctrlParams.agc.setPoint_dBfs = setPoint_dBfs;
+           rx_channelA_params->ctrlParams.agc.attack_ms = attack_ms;
+           rx_channelA_params->ctrlParams.agc.decay_ms = decay_ms;
+           rx_channelA_params->ctrlParams.agc.decay_delay_ms = decay_delay_ms;
+           rx_channelA_params->ctrlParams.agc.decay_threshold_dB = decay_threshold_dB;
+        }
         rx_channelA_params->rspDuoTunerParams.rfNotchEnable = RFNotch;
         rx_channelA_params->rspDuoTunerParams.rfDabNotchEnable = DABNotch;
         rx_channelA_params->rspDuoTunerParams.tuner1AmNotchEnable = rspDuoAMNotch;
@@ -316,6 +323,13 @@ int sdrplay_configure_rsp() {
             rx_channel_params->tunerParams.gain.gRdB = gRdB_A;
         }
         rx_channel_params->tunerParams.gain.LNAstate = LNAstate_A;
+        if (rx_channel_params->ctrlParams.agc.enable == sdrplay_api_AGC_CTRL_EN) {
+           rx_channel_params->ctrlParams.agc.setPoint_dBfs = setPoint_dBfs;
+           rx_channel_params->ctrlParams.agc.attack_ms = attack_ms;
+           rx_channel_params->ctrlParams.agc.decay_ms = decay_ms;
+           rx_channel_params->ctrlParams.agc.decay_delay_ms = decay_delay_ms;
+           rx_channel_params->ctrlParams.agc.decay_threshold_dB = decay_threshold_dB;
+        }
         rx_channel_params->rspDuoTunerParams.rfNotchEnable = RFNotch;
         rx_channel_params->rspDuoTunerParams.rfDabNotchEnable = DABNotch;
         rx_channel_params->rspDuoTunerParams.tuner1AmNotchEnable = rspDuoAMNotch;
@@ -348,6 +362,13 @@ int sdrplay_configure_rsp() {
             rx_channel_params->tunerParams.gain.gRdB = gRdB_A;
         }
         rx_channel_params->tunerParams.gain.LNAstate = LNAstate_A;
+        if (rx_channel_params->ctrlParams.agc.enable == sdrplay_api_AGC_CTRL_EN) {
+           rx_channel_params->ctrlParams.agc.setPoint_dBfs = setPoint_dBfs;
+           rx_channel_params->ctrlParams.agc.attack_ms = attack_ms;
+           rx_channel_params->ctrlParams.agc.decay_ms = decay_ms;
+           rx_channel_params->ctrlParams.agc.decay_delay_ms = decay_delay_ms;
+           rx_channel_params->ctrlParams.agc.decay_threshold_dB = decay_threshold_dB;
+        }
         if (sdrplay_select_notch_filter(device_params) != 0) {
             return -1;
         }
@@ -736,7 +757,7 @@ static void sdrplay_print_settings() {
         } else {
             fprintf(stderr, "SerNo=%s hwVer=%d tuner=0x%02x internalDecimation=%d\n", device.SerNo, device.hwVer, device.tuner, internal_decimation);
         }
-        fprintf(stderr, "RX tuner - LO=%.0lf BW=%d IF=%d Dec=%d IFagc=%d IFgain=%d LNAgain=%d\n", rx_channel_params->tunerParams.rfFreq.rfHz, rx_channel_params->tunerParams.bwType, rx_channel_params->tunerParams.ifType, rx_channel_params->ctrlParams.decimation.decimationFactor, rx_channel_params->ctrlParams.agc.enable, rx_channel_params->tunerParams.gain.gRdB, rx_channel_params->tunerParams.gain.LNAstate);
+        fprintf(stderr, "RX tuner - LO=%.0lf BW=%d IF=%d Dec=%d IFagc=%d IFgain=%d LNAgain=%d AGC_setPoint_dBfs=%d AGC_attack_ms=%hu AGC_decay_ms=%hu AGC_decay_delay_ms=%hu AGC_decay_threshold_dB=%hu\n", rx_channel_params->tunerParams.rfFreq.rfHz, rx_channel_params->tunerParams.bwType, rx_channel_params->tunerParams.ifType, rx_channel_params->ctrlParams.decimation.decimationFactor, rx_channel_params->ctrlParams.agc.enable, rx_channel_params->tunerParams.gain.gRdB, rx_channel_params->tunerParams.gain.LNAstate, rx_channel_params->ctrlParams.agc.setPoint_dBfs, rx_channel_params->ctrlParams.agc.attack_ms, rx_channel_params->ctrlParams.agc.decay_ms, rx_channel_params->ctrlParams.agc.decay_delay_ms, rx_channel_params->ctrlParams.agc.decay_threshold_dB);
         fprintf(stderr, "RX tuner - DCenable=%d IQenable=%d dcCal=%d speedUp=%d trackTime=%d refreshRateTime=%d\n", (int)(rx_channel_params->ctrlParams.dcOffset.DCenable), (int)(rx_channel_params->ctrlParams.dcOffset.IQenable), (int)(rx_channel_params->tunerParams.dcOffsetTuner.dcCal), (int)(rx_channel_params->tunerParams.dcOffsetTuner.speedUp), rx_channel_params->tunerParams.dcOffsetTuner.trackTime, rx_channel_params->tunerParams.dcOffsetTuner.refreshRateTime);
         /* RSP model specific settings */
         if (device.hwVer == SDRPLAY_RSP1A_ID || device.hwVer == SDRPLAY_RSP1B_ID) {
@@ -752,10 +773,10 @@ static void sdrplay_print_settings() {
         sdrplay_api_RxChannelParamsT *rx_channelA_params = device_params->rxChannelA;
         sdrplay_api_RxChannelParamsT *rx_channelB_params = device_params->rxChannelB;
         fprintf(stderr, "SerNo=%s hwVer=%d tuner=0x%02x rspDuoMode=0x%02x rspDuoSampleFreq=%.0lf internalDecimation=%d\n", device.SerNo, device.hwVer, device.tuner, device.rspDuoMode, device.rspDuoSampleFreq, internal_decimation);
-        fprintf(stderr, "RX A - LO=%.0lf BW=%d IF=%d Dec=%d IFagc=%d IFgain=%d LNAgain=%d\n", rx_channelA_params->tunerParams.rfFreq.rfHz, rx_channelA_params->tunerParams.bwType, rx_channelA_params->tunerParams.ifType, rx_channelA_params->ctrlParams.decimation.decimationFactor, rx_channelA_params->ctrlParams.agc.enable, rx_channelA_params->tunerParams.gain.gRdB, rx_channelA_params->tunerParams.gain.LNAstate);
+        fprintf(stderr, "RX A - LO=%.0lf BW=%d IF=%d Dec=%d IFagc=%d IFgain=%d LNAgain=%d AGC_setPoint_dBfs=%d AGC_attack_ms=%hu AGC_decay_ms=%hu AGC_decay_delay_ms=%hu AGC_decay_threshold_dB=%hu\n", rx_channelA_params->tunerParams.rfFreq.rfHz, rx_channelA_params->tunerParams.bwType, rx_channelA_params->tunerParams.ifType, rx_channelA_params->ctrlParams.decimation.decimationFactor, rx_channelA_params->ctrlParams.agc.enable, rx_channelA_params->tunerParams.gain.gRdB, rx_channelA_params->tunerParams.gain.LNAstate, rx_channelA_params->ctrlParams.agc.setPoint_dBfs, rx_channelA_params->ctrlParams.agc.attack_ms, rx_channelA_params->ctrlParams.agc.decay_ms, rx_channelA_params->ctrlParams.agc.decay_delay_ms, rx_channelA_params->ctrlParams.agc.decay_threshold_dB);
         fprintf(stderr, "RX A - DCenable=%d IQenable=%d dcCal=%d speedUp=%d trackTime=%d refreshRateTime=%d\n", (int)(rx_channelA_params->ctrlParams.dcOffset.DCenable), (int)(rx_channelA_params->ctrlParams.dcOffset.IQenable), (int)(rx_channelA_params->tunerParams.dcOffsetTuner.dcCal), (int)(rx_channelA_params->tunerParams.dcOffsetTuner.speedUp), rx_channelA_params->tunerParams.dcOffsetTuner.trackTime, rx_channelA_params->tunerParams.dcOffsetTuner.refreshRateTime);
         fprintf(stderr, "RX A - tuner1AmPortSel=%d rfNotchEnable=%d rfDabNotchEnable=%d tuner1AmNotchEnable=%d biasTEnable=%d\n", (int)(rx_channelA_params->rspDuoTunerParams.tuner1AmPortSel), (int)(rx_channelA_params->rspDuoTunerParams.rfNotchEnable), (int)(rx_channelA_params->rspDuoTunerParams.rfDabNotchEnable), (int)(rx_channelA_params->rspDuoTunerParams.tuner1AmNotchEnable), (int)(rx_channelA_params->rspDuoTunerParams.biasTEnable));
-        fprintf(stderr, "RX B - LO=%.0lf BW=%d IF=%d Dec=%d IFagc=%d IFgain=%d LNAgain=%d\n", rx_channelB_params->tunerParams.rfFreq.rfHz, rx_channelB_params->tunerParams.bwType, rx_channelB_params->tunerParams.ifType, rx_channelB_params->ctrlParams.decimation.decimationFactor, rx_channelB_params->ctrlParams.agc.enable, rx_channelB_params->tunerParams.gain.gRdB, rx_channelB_params->tunerParams.gain.LNAstate);
+        fprintf(stderr, "RX B - LO=%.0lf BW=%d IF=%d Dec=%d IFagc=%d IFgain=%d LNAgain=%d AGC_setPoint_dBfs=%d AGC_attack_ms=%hu AGC_decay_ms=%hu AGC_decay_delay_ms=%hu AGC_decay_threshold_dB=%hu\n", rx_channelB_params->tunerParams.rfFreq.rfHz, rx_channelB_params->tunerParams.bwType, rx_channelB_params->tunerParams.ifType, rx_channelB_params->ctrlParams.decimation.decimationFactor, rx_channelB_params->ctrlParams.agc.enable, rx_channelB_params->tunerParams.gain.gRdB, rx_channelB_params->tunerParams.gain.LNAstate, rx_channelB_params->ctrlParams.agc.setPoint_dBfs, rx_channelB_params->ctrlParams.agc.attack_ms, rx_channelB_params->ctrlParams.agc.decay_ms, rx_channelB_params->ctrlParams.agc.decay_delay_ms, rx_channelB_params->ctrlParams.agc.decay_threshold_dB);
         fprintf(stderr, "RX B - DCenable=%d IQenable=%d dcCal=%d speedUp=%d trackTime=%d refreshRateTime=%d\n", (int)(rx_channelB_params->ctrlParams.dcOffset.DCenable), (int)(rx_channelB_params->ctrlParams.dcOffset.IQenable), (int)(rx_channelB_params->tunerParams.dcOffsetTuner.dcCal), (int)(rx_channelB_params->tunerParams.dcOffsetTuner.speedUp), rx_channelB_params->tunerParams.dcOffsetTuner.trackTime, rx_channelB_params->tunerParams.dcOffsetTuner.refreshRateTime);
         fprintf(stderr, "RX B - tuner1AmPortSel=%d rfNotchEnable=%d rfDabNotchEnable=%d tuner1AmNotchEnable=%d biasTEnable=%d\n", (int)(rx_channelB_params->rspDuoTunerParams.tuner1AmPortSel), (int)(rx_channelB_params->rspDuoTunerParams.rfNotchEnable), (int)(rx_channelB_params->rspDuoTunerParams.rfDabNotchEnable), (int)(rx_channelB_params->rspDuoTunerParams.tuner1AmNotchEnable), (int)(rx_channelB_params->rspDuoTunerParams.biasTEnable));
     }

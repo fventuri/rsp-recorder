@@ -17,13 +17,13 @@
 #include <string.h>
 
 /* defaults */
-static const sdrplay_api_AgcControlT default_agc_enabled_setting = sdrplay_api_AGC_50HZ;
 static char default_output_filename_wavviewdx_raw[] = "{WAVVIEWDX-RAW}.raw";
 static char default_output_filename_linrad[] = "RSP_recording_{TIMESTAMP}_{FREQKHZ}.raw";
 static char default_output_filename_sdruno[] = "{SDRUNO}.wav";
 static char default_output_filename_sdrconnect[] = "{SDRCONNECT}.wav";
 static char default_output_filename_experimental[] = "RSP_recording_{TIMESTAMP}_{FREQKHZ}.wav";
 
+static sdrplay_api_AgcControlT agc_enabled_setting = sdrplay_api_AGC_50HZ;
 
 /* global variables */
 /* RSP settings */
@@ -41,6 +41,11 @@ int gRdB_A = 40;
 int gRdB_B = 40;
 int LNAstate_A = 0;
 int LNAstate_B = 0;
+int setPoint_dBfs = - 60;
+int attack_ms = 0;
+int decay_ms = 0;
+int decay_delay_ms = 0;
+int decay_threshold_dB = 0;
 int RFNotch = 0;
 int DABNotch = 0;
 int rspDuoAMNotch = 0;
@@ -100,6 +105,7 @@ static void usage(const char* progname)
     fprintf(stderr, "    -b <IF bandwidth>\n");
     fprintf(stderr, "    -g <IF gain reduction> (\"AGC\" to enable AGC)\n");
     fprintf(stderr, "    -l <LNA state>\n");
+    fprintf(stderr, "    -q AGC parameters <setPoint_dBfs,attack_ms,decay_ms,decay_delay_ms,decay_threshold_dB> (default: -60,0,0,0,0)\n");
     fprintf(stderr, "    -n <notch filter> (one of: RF, DAB, or RSPduo-AM)\n");
     fprintf(stderr, "    -D disable post tuner DC offset compensation (default: enabled)\n");
     fprintf(stderr, "    -I disable post tuner I/Q balance compensation (default: enabled)\n");
@@ -128,7 +134,7 @@ static void usage(const char* progname)
 int get_config_from_cli(int argc, char *argv[])
 {
     int c;
-    while ((c = getopt(argc, argv, "c:s:w:a:r:p:d:i:b:g:l:n:DIy:BHu:f:x:m:t:o:z:j:k:GXvh")) != -1) {
+    while ((c = getopt(argc, argv, "c:s:w:a:r:p:d:i:b:g:l:q:n:DIy:BHu:f:x:m:t:o:z:j:k:GXvh")) != -1) {
         int n;
         switch (c) {
             case 'c':
@@ -181,14 +187,14 @@ int get_config_from_cli(int argc, char *argv[])
                 break;
             case 'g':
                 if (strcmp(optarg, "AGC") == 0 || strcmp(optarg, "AGC,AGC") == 0) {
-                    agc_A = default_agc_enabled_setting;
-                    agc_B = default_agc_enabled_setting;
+                    agc_A = agc_enabled_setting;
+                    agc_B = agc_enabled_setting;
                 } else if (sscanf(optarg, "AGC,%d", &gRdB_B) == 1) {
-                    agc_A = default_agc_enabled_setting;
+                    agc_A = agc_enabled_setting;
                     agc_B = sdrplay_api_AGC_DISABLE;
                 } else if (sscanf(optarg, "%d,AGC", &gRdB_A) == 1) {
                     agc_A = sdrplay_api_AGC_DISABLE;
-                    agc_B = default_agc_enabled_setting;
+                    agc_B = agc_enabled_setting;
                 } else {
                     n = sscanf(optarg, "%d,%d", &gRdB_A, &gRdB_B);
                     if (n < 1) {
@@ -211,6 +217,13 @@ int get_config_from_cli(int argc, char *argv[])
                 if (n == 1) {
                     LNAstate_B = LNAstate_A;
                 }
+                break;
+            case 'q':
+                if (sscanf(optarg, "%d,%d,%d,%d,%d", &setPoint_dBfs, &attack_ms, &decay_ms, &decay_delay_ms, &decay_threshold_dB) != 5) {
+                    fprintf(stderr, "invalid AGC parameters: %s\n", optarg);
+                    return -1;
+                }
+                agc_enabled_setting = sdrplay_api_AGC_CTRL_EN;
                 break;
             case 'n':
                 if (strcasecmp(optarg, "RF") == 0 || strcasecmp(optarg, "FM") == 0) {
@@ -317,6 +330,14 @@ int get_config_from_cli(int argc, char *argv[])
                 usage(argv[0]);
                 return -1;
         }
+    }
+
+    /* AGC setting */
+    if (agc_A != sdrplay_api_AGC_DISABLE) {
+        agc_A = agc_enabled_setting;
+    }
+    if (agc_B != sdrplay_api_AGC_DISABLE) {
+        agc_B = agc_enabled_setting;
     }
 
     if (marker_interval > 0) {
@@ -481,8 +502,8 @@ static int read_config_grdb(const char *valuestr, sdrplay_api_AgcControlT *agc_f
 
     if (nn == 1) {
         if (strcasecmp(first, "AGC") == 0) {
-            *agc_first = default_agc_enabled_setting;
-            *agc_second = default_agc_enabled_setting;
+            *agc_first = agc_enabled_setting;
+            *agc_second = agc_enabled_setting;
         } else {
             int tmp;
             int n;
@@ -500,7 +521,7 @@ static int read_config_grdb(const char *valuestr, sdrplay_api_AgcControlT *agc_f
         int tmp_gRdB_first;
         int tmp_gRdB_second;
         if (strcasecmp(first, "AGC") == 0) {
-            tmp_agc_first = default_agc_enabled_setting;
+            tmp_agc_first = agc_enabled_setting;
         } else {
             int n;
             if (sscanf(first, "%d%n", &tmp_gRdB_first, &n) != 1 || (size_t)n != strlen(first)) {
@@ -509,7 +530,7 @@ static int read_config_grdb(const char *valuestr, sdrplay_api_AgcControlT *agc_f
             tmp_agc_first = sdrplay_api_AGC_DISABLE;
         }
         if (strcasecmp(second, "AGC") == 0) {
-            tmp_agc_second = default_agc_enabled_setting;
+            tmp_agc_second = agc_enabled_setting;
         } else {
             int n;
             if (sscanf(second, "%d%n", &tmp_gRdB_second, &n) != 1 || (size_t)n != strlen(second)) {
@@ -639,6 +660,21 @@ static int read_config_file(const char *config_file) {
             read_config_status = read_config_grdb(value, &agc_A, &agc_B, &gRdB_A, &gRdB_B);
         } else if (strcasecmp(key, "LNA state") == 0 || strcasecmp(key, "RFGR") == 0) {
             read_config_status = read_config_two_ints(value, &LNAstate_A, &LNAstate_B);
+        } else if (strcasecmp(key, "AGC setPoint dBfs") == 0 || strcasecmp(key, "setPoint dBfs") == 0) {
+            read_config_status = read_config_int(value, &setPoint_dBfs);
+            agc_enabled_setting = sdrplay_api_AGC_CTRL_EN;
+        } else if (strcasecmp(key, "AGC attack ms") == 0 || strcasecmp(key, "attack ms") == 0) {
+            read_config_status = read_config_int(value, &attack_ms);
+            agc_enabled_setting = sdrplay_api_AGC_CTRL_EN;
+        } else if (strcasecmp(key, "AGC decay ms") == 0 || strcasecmp(key, "decay ms") == 0) {
+            read_config_status = read_config_int(value, &decay_ms);
+            agc_enabled_setting = sdrplay_api_AGC_CTRL_EN;
+        } else if (strcasecmp(key, "AGC decay delay ms") == 0 || strcasecmp(key, "decay delay ms") == 0) {
+            read_config_status = read_config_int(value, &decay_delay_ms);
+            agc_enabled_setting = sdrplay_api_AGC_CTRL_EN;
+        } else if (strcasecmp(key, "AGC decay threshold dB") == 0 || strcasecmp(key, "decay threshold dB") == 0) {
+            read_config_status = read_config_int(value, &decay_threshold_dB);
+            agc_enabled_setting = sdrplay_api_AGC_CTRL_EN;
         } else if (strcasecmp(key, "RF notch") == 0 || strcasecmp(key, "FM notch") == 0) {
             read_config_status = read_config_bool(value, &RFNotch);
         } else if (strcasecmp(key, "DAB notch") == 0) {
