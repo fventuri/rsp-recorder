@@ -41,6 +41,7 @@ static EventContext event_context;
 
 /* internal functions */
 static int sdrplay_internal_decimation(double fs, sdrplay_api_If_kHzT ifreq, sdrplay_api_Bw_MHzT bw);
+static sdrplay_api_Bw_MHzT sdrplay_recommended_if_bandwidth(double ofs);
 static int sdrplay_select_antenna(sdrplay_api_DeviceParamsT *device_params);
 static int sdrplay_select_notch_filter(sdrplay_api_DeviceParamsT *device_params);
 static int sdrplay_enable_bias_t(sdrplay_api_DeviceParamsT *device_params);
@@ -144,6 +145,11 @@ int sdrplay_select_rsp()
     }
     device = devices[device_index];
 
+	/* keep the current behavior (default IF bandwidth = 200kHz) for Low-IF mode */
+    if (if_frequency != sdrplay_api_IF_Zero && if_bandwidth == sdrplay_api_BW_Undefined) {
+        if_bandwidth = sdrplay_api_BW_0_200;
+    }
+
     internal_decimation = sdrplay_internal_decimation(sample_rate, if_frequency, if_bandwidth);
     if (internal_decimation == -1) {
         fprintf(stderr, "invalid sample rate or IF bandwidth for Low-IF mode\n");
@@ -244,6 +250,11 @@ int sdrplay_select_rsp()
 }
 
 int sdrplay_configure_rsp() {
+    output_sample_rate = sample_rate / internal_decimation / decimation;
+    if (if_frequency == sdrplay_api_IF_Zero && if_bandwidth == sdrplay_api_BW_Undefined) {
+        if_bandwidth = sdrplay_recommended_if_bandwidth(output_sample_rate);
+    }
+
     sdrplay_api_ErrT err = sdrplay_api_GetDeviceParams(device.dev, &device_params);
     if (err != sdrplay_api_Success) {
         fprintf(stderr, "sdrplay_api_GetDeviceParams() failed: %s\n", sdrplay_api_GetErrorString(err));
@@ -396,8 +407,6 @@ int sdrplay_configure_rsp() {
         rx_channel_params->tunerParams.rfFreq.rfHz = frequency_A;
     }
 
-    output_sample_rate = sample_rate / internal_decimation / decimation;
-
     return 0;
 }
 
@@ -435,6 +444,26 @@ static int sdrplay_internal_decimation(double fs, sdrplay_api_If_kHzT ifreq, sdr
         }
     }
     return -1;
+}
+
+static sdrplay_api_Bw_MHzT sdrplay_recommended_if_bandwidth(double ofs) {
+    if (ofs < 300e3) {
+        return sdrplay_api_BW_0_200;
+    } else if (ofs < 600e3) {
+        return sdrplay_api_BW_0_300;
+    } else if (ofs < 1536e3) {
+        return sdrplay_api_BW_0_600;
+    } else if (ofs < 5000e3) {
+        return sdrplay_api_BW_1_536;
+    } else if (ofs < 6000e3) {
+        return sdrplay_api_BW_5_000;
+    } else if (ofs < 7000e3) {
+        return sdrplay_api_BW_6_000;
+    } else if (ofs < 8000e3) {
+        return sdrplay_api_BW_7_000;
+    } else {
+        return sdrplay_api_BW_8_000;
+    }
 }
 
 static int sdrplay_select_antenna(sdrplay_api_DeviceParamsT *device_params) {
